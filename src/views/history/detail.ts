@@ -1,3 +1,4 @@
+import { workoutNameInput } from '../../components/workout-name';
 import { musclesLabel } from '../../components/muscle-chips';
 import { db, type Exercise, type Workout, type WorkoutSet } from '../../db';
 import { groupBy, lastSessionSets, sortSets } from '../../lib/analytics';
@@ -81,11 +82,11 @@ function buildDetail(data: DetailData, reload: () => Promise<void>): Node[] {
 
   const header = h('div', { class: 'card stack history-detail-header' },
     h('div', { class: 'spread' },
-      h('h1', {}, formatDate(workout.startedAt)),
+      h('div', { class: 'grow' }, workoutNameInput(workout, { placeholder: 'Add a name' })),
       h('button', { class: 'btn-secondary', onclick: () => editTimeSheet(workout, reload) }, 'Edit time'),
     ),
     h('div', { class: 'muted' },
-      `${formatTime(workout.startedAt)} – ${formatTime(endedAt)} · ${workoutDuration(workout.startedAt, endedAt)}`),
+      `${formatDate(workout.startedAt)} · ${formatTime(workout.startedAt)} – ${formatTime(endedAt)} · ${workoutDuration(workout.startedAt, endedAt)}`),
     h('div', { class: 'history-stats' }, stats.join(' · ')),
   );
 
@@ -127,7 +128,7 @@ function buildDetail(data: DetailData, reload: () => Promise<void>): Node[] {
   );
 
   const actions = h('div', { class: 'stack history-actions' },
-    h('button', { class: 'btn-lg btn-block', onclick: safe(() => repeatWorkout(sections.map((s) => s.exerciseId))) },
+    h('button', { class: 'btn-lg btn-block', onclick: safe(() => repeatWorkout(sections.map((s) => s.exerciseId), workout.name)) },
       'Repeat this workout'),
     h('button', { class: 'btn-danger btn-block', onclick: safe(() => deleteWorkout(workout.id)) }, 'Delete workout'),
   );
@@ -145,14 +146,14 @@ function buildDetail(data: DetailData, reload: () => Promise<void>): Node[] {
 
 // ---- Workout-level actions ----
 
-async function repeatWorkout(exerciseIds: number[]): Promise<void> {
+async function repeatWorkout(exerciseIds: number[], name?: string): Promise<void> {
   const active = await db.workouts.filter((w) => w.endedAt === undefined).first();
   if (active) {
     if (await confirmDialog('A workout is already in progress. Finish it before repeating this one.', { confirmLabel: 'Go to workout' }))
       go('log');
     return;
   }
-  await db.workouts.add({ startedAt: Date.now(), exerciseIds });
+  await db.workouts.add({ startedAt: Date.now(), exerciseIds, ...(name ? { name } : {}) });
   toast('Workout started');
   go('log');
 }

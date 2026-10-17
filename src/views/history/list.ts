@@ -103,9 +103,10 @@ function workoutRow(w: Workout, sets: WorkoutSet[], names: Map<number, string>, 
 
   return h('a', { class: 'card history-row', href: `#/history/${w.id}` },
     h('div', { class: 'spread' },
-      h('strong', {}, `${formatDate(w.startedAt)} · ${formatTime(w.startedAt)}`),
+      h('strong', {}, w.name ?? `${formatDate(w.startedAt)} · ${formatTime(w.startedAt)}`),
       h('span', { class: 'muted small' }, workoutDuration(w.startedAt, w.endedAt!)),
     ),
+    w.name ? h('div', { class: 'muted small' }, `${formatDate(w.startedAt)} · ${formatTime(w.startedAt)}`) : null,
     h('div', { class: 'history-row-exercises' }, exerciseSummary(exNames)),
     h('div', { class: 'muted small' }, stats.join(' · ')),
   );

@@ -53,12 +53,12 @@ async function buildIdle(rerender: (o?: RenderOpts) => Promise<void>): Promise<H
   const byId = new Map(exercises.map((e) => [e.id, e]));
   const recentIds = await Promise.all(recent.map((w) => workoutExerciseIds(w)));
 
-  const start = (ids: number[]) => safe(async () => {
+  const start = (ids: number[], name?: string) => safe(async () => {
     // Another tab/session may already have started one: just resume it.
     if (!(await getActiveWorkout())) {
       const usable = ids.filter((id) => { const ex = byId.get(id); return ex && !ex.archived; });
       if (ids.length && usable.length < ids.length) toast('Skipped archived or deleted exercises');
-      await db.workouts.add({ startedAt: Date.now(), exerciseIds: usable });
+      await db.workouts.add({ startedAt: Date.now(), exerciseIds: usable, ...(name ? { name } : {}) });
     }
     await rerender();
   });
@@ -71,14 +71,14 @@ async function buildIdle(rerender: (o?: RenderOpts) => Promise<void>): Promise<H
       : null,
     h('button', { type: 'button', class: 'btn-block log-start', onclick: start([]) }, 'Start workout'),
     recent.length
-      ? h('button', { type: 'button', class: 'btn-secondary btn-block btn-lg', onclick: start(recentIds[0]) },
+      ? h('button', { type: 'button', class: 'btn-secondary btn-block btn-lg', onclick: start(recentIds[0], recent[0].name) },
           '↻ Repeat last workout')
       : null,
     recent.length
       ? h('section', { class: 'stack log-recent' },
           h('h2', { class: 'log-section-title' }, 'Recent workouts'),
           h('ul', { class: 'list card log-recent-list' }, ...recent.map((w, i) =>
-            recentRow(w, recentIds[i], byId, start(recentIds[i])))))
+            recentRow(w, recentIds[i], byId, start(recentIds[i], w.name)))))
       : h('p', { class: 'empty' }, 'No workouts yet. Tap “Start workout” and add your first exercise.'),
   );
 }
@@ -91,7 +91,8 @@ function recentRow(w: Workout, ids: number[], byId: Map<number, Exercise>, onRep
   const duration = w.endedAt !== undefined ? formatDuration((w.endedAt - w.startedAt) / 1000) : '';
   return h('li', { class: 'log-recent-row' },
     h('div', { class: 'grow log-recent-info' },
-      h('div', { class: 'log-recent-date' }, `${formatDate(w.startedAt)} · ${formatTime(w.startedAt)}`),
+      w.name ? h('div', { class: 'log-recent-date' }, w.name) : null,
+      h('div', { class: w.name ? 'muted small' : 'log-recent-date' }, `${formatDate(w.startedAt)} · ${formatTime(w.startedAt)}`),
       h('div', { class: 'muted small' }, summary),
       duration ? h('div', { class: 'muted small' }, duration) : null),
     h('button', { type: 'button', class: 'btn-ghost log-repeat', disabled: ids.length === 0, onclick: onRepeat }, 'Repeat'),

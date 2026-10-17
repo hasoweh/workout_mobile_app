@@ -24,6 +24,8 @@ export interface Workout {
   endedAt?: number;
   /** Exercises in display order, including ones added but not yet logged. */
   exerciseIds: number[];
+  /** Optional user-given name, e.g. "Push day". */
+  name?: string;
   notes?: string;
 }
 

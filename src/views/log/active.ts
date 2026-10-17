@@ -1,3 +1,4 @@
+import { workoutNameInput } from '../../components/workout-name';
 import { pickExercise } from '../../components/exercise-picker';
 import { db, type Exercise, type Workout, type WorkoutSet } from '../../db';
 import { lastSessionSets, sortSets } from '../../lib/analytics';
@@ -76,8 +77,8 @@ function header(workout: Workout): HTMLElement {
   }, 1000);
 
   return h('header', { class: 'log-header' },
-    h('div', {},
-      h('h1', {}, 'Workout'),
+    h('div', { class: 'grow' },
+      workoutNameInput(workout, { placeholder: 'Name this workout' }),
       h('div', { class: 'muted small' }, `Started ${formatDate(workout.startedAt)}, ${formatTime(workout.startedAt)}`)),
     timer,
   );

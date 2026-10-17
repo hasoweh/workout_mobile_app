@@ -51,7 +51,7 @@ export async function exportJSON(): Promise<BackupFile> {
 }
 
 const CSV_HEADER = [
-  'date', 'start_time', 'workout_id', 'exercise', 'muscles', 'type',
+  'date', 'start_time', 'workout_id', 'workout_name', 'exercise', 'muscles', 'type',
   'set_number', 'weight_kg', 'reps', 'distance_km', 'duration_s', 'notes',
 ];
 
@@ -99,7 +99,7 @@ export async function exportCSV(): Promise<string> {
       setNumbers.set(s.exerciseId, n);
       const ex = exById.get(s.exerciseId);
       lines.push(csvRow([
-        localDate(w.startedAt), localTime(w.startedAt), w.id,
+        localDate(w.startedAt), localTime(w.startedAt), w.id, w.name,
         ex?.name ?? `#${s.exerciseId}`, ex?.muscles.join('; '), ex?.type,
         n, s.weight, s.reps, s.distance, s.duration, s.notes,
       ]));
@@ -252,6 +252,8 @@ function parseWorkout(raw: unknown, i: number, ids: Set<number>, exerciseIds: Se
   if (endedAt !== undefined) w.endedAt = endedAt;
   const notes = optString(raw, 'notes', where);
   if (notes !== undefined) w.notes = notes;
+  const name = optString(raw, 'name', where)?.trim();
+  if (name) w.name = name;
   return w;
 }
 
