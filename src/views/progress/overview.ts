@@ -1,6 +1,6 @@
 import { Chart } from 'chart.js';
-import { db, MUSCLE_GROUPS, type Exercise, type MuscleGroup, type Workout, type WorkoutSet } from '../../db';
-import { groupBy, startOfDay, startOfWeek, summarizeSession, type ExerciseSession } from '../../lib/analytics';
+import { db, MUSCLES, type Exercise, type Muscle, type Workout, type WorkoutSet } from '../../db';
+import { groupBy, muscleShares, startOfDay, startOfWeek, summarizeSession, type ExerciseSession } from '../../lib/analytics';
 import { h } from '../../lib/dom';
 import { formatDate, formatDuration, toDisplayWeight } from '../../lib/format';
 import { getSettings, type Units } from '../../lib/settings';
@@ -198,29 +198,31 @@ function muscleSection(
   while (weeks.length < BAR_WEEKS) weeks.unshift(prevWeek(weeks[0]));
   const weekIndex = new Map(weeks.map((w, i) => [w, i]));
 
-  // counts[group][weekIdx]
-  const counts = new Map<MuscleGroup, number[]>();
+  // counts[muscle][weekIdx]; secondary muscles get half a set (see muscleShares).
+  const counts = new Map<Muscle, number[]>();
   for (const s of sets) {
     const workout = workoutById.get(s.workoutId);
     const ex = exerciseById.get(s.exerciseId);
     if (!workout || !ex) continue;
     const i = weekIndex.get(startOfWeek(workout.startedAt));
     if (i === undefined) continue;
-    const row = counts.get(ex.muscleGroup) ?? new Array<number>(BAR_WEEKS).fill(0);
-    row[i]++;
-    counts.set(ex.muscleGroup, row);
+    for (const [muscle, share] of muscleShares(ex)) {
+      const row = counts.get(muscle) ?? new Array<number>(BAR_WEEKS).fill(0);
+      row[i] += share;
+      counts.set(muscle, row);
+    }
   }
-  const groups = MUSCLE_GROUPS.filter((g) => counts.has(g));
+  const groups = MUSCLES.filter((g) => counts.has(g));
 
   const section = h('section', { class: 'card stack' },
-    h('div', { class: 'spread' }, h('h2', { class: 'progress-h2' }, 'Sets per muscle group'), h('span', { class: 'small muted' }, `Last ${BAR_WEEKS} weeks`)),
+    h('div', { class: 'spread' }, h('h2', { class: 'progress-h2' }, 'Sets per muscle'), h('span', { class: 'small muted' }, `Last ${BAR_WEEKS} weeks`)),
   );
   if (groups.length === 0) {
     section.append(h('p', { class: 'muted small' }, `No sets in the last ${BAR_WEEKS} weeks.`));
     return section;
   }
 
-  const canvas = h('canvas', { 'aria-label': 'Stacked bar chart of weekly sets per muscle group', role: 'img' });
+  const canvas = h('canvas', { 'aria-label': 'Stacked bar chart of weekly sets per muscle', role: 'img' });
   section.append(h('div', { class: 'progress-chart' }, canvas));
   track(
     new Chart(canvas, {
@@ -244,7 +246,7 @@ function muscleSection(
         interaction: { mode: 'index', intersect: false },
         scales: {
           x: { stacked: true, grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 4 } },
-          y: { stacked: true, beginAtZero: true, ticks: { precision: 0, maxTicksLimit: 5 }, grid: { color: t.border } },
+          y: { stacked: true, beginAtZero: true, ticks: { maxTicksLimit: 5 }, grid: { color: t.border } },
         },
         plugins: {
           tooltip: {
@@ -257,19 +259,21 @@ function muscleSection(
   );
 
   // HTML legend doubles as "this week vs last week" list.
-  const cur = (g: MuscleGroup) => counts.get(g)![BAR_WEEKS - 1];
-  const last = (g: MuscleGroup) => counts.get(g)![BAR_WEEKS - 2];
+  const cur = (g: Muscle) => counts.get(g)![BAR_WEEKS - 1];
+  const last = (g: Muscle) => counts.get(g)![BAR_WEEKS - 2];
   const sorted = [...groups].sort((a, b) => cur(b) - cur(a) || last(b) - last(a));
   section.append(
-    h('div', { class: 'spread small muted' }, h('span', {}, 'Muscle group'), h('span', {}, 'This week · last week')),
+    h('div', { class: 'spread small muted' }, h('span', {}, 'Muscle'), h('span', {}, 'This week · last week')),
     h('ul', { class: 'list progress-muscle-list' },
       ...sorted.map((g) =>
         h('li', { class: 'spread' },
           h('span', { class: 'row' }, h('span', { class: 'progress-swatch', style: `background: ${muscleColor(g, t.dark)}` }), g),
-          h('span', {}, h('strong', {}, cur(g)), h('span', { class: 'muted' }, ` · ${last(g)}`)),
+          h('span', {}, h('strong', {}, fmtNum(cur(g))), h('span', { class: 'muted' }, ` · ${fmtNum(last(g))}`)),
         ),
       ),
     ),
+
+    h('p', { class: 'muted small' }, 'Each set counts fully for the primary muscle and ½ for each secondary muscle.'),
   );
   return section;
 }

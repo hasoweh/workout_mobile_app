@@ -1,3 +1,4 @@
+import { musclesLabel } from '../../components/muscle-chips';
 import { Chart } from 'chart.js';
 import { db, type Exercise, type WorkoutSet } from '../../db';
 import { computePRs, exerciseHistory, startOfDay, type ExerciseSession } from '../../lib/analytics';
@@ -44,7 +45,7 @@ export async function renderDetail(root: HTMLElement, idParam: string): Promise<
   root.append(
     back,
     h('h1', { class: 'progress-title' }, exercise.name),
-    h('p', { class: 'muted progress-subtitle' }, `${exercise.muscleGroup} · ${exercise.type === 'cardio' ? 'Cardio' : 'Strength'}`),
+    h('p', { class: 'muted progress-subtitle' }, `${musclesLabel(exercise.muscles)} · ${exercise.type === 'cardio' ? 'Cardio' : 'Strength'}`),
   );
   if (sessions.length === 0) {
     root.append(

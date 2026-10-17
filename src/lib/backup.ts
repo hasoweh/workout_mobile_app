@@ -1,4 +1,4 @@
-import { db, MUSCLE_GROUPS, type Exercise, type MuscleGroup, type SettingRow, type Workout, type WorkoutSet } from '../db';
+import { db, legacyMuscles, MUSCLES, type Exercise, type Muscle, type SettingRow, type Workout, type WorkoutSet } from '../db';
 import { sortSets } from './analytics';
 import { getSettings, setSetting, type Settings } from './settings';
 
@@ -51,7 +51,7 @@ export async function exportJSON(): Promise<BackupFile> {
 }
 
 const CSV_HEADER = [
-  'date', 'start_time', 'workout_id', 'exercise', 'muscle_group', 'type',
+  'date', 'start_time', 'workout_id', 'exercise', 'muscles', 'type',
   'set_number', 'weight_kg', 'reps', 'distance_km', 'duration_s', 'notes',
 ];
 
@@ -100,7 +100,7 @@ export async function exportCSV(): Promise<string> {
       const ex = exById.get(s.exerciseId);
       lines.push(csvRow([
         localDate(w.startedAt), localTime(w.startedAt), w.id,
-        ex?.name ?? `#${s.exerciseId}`, ex?.muscleGroup, ex?.type,
+        ex?.name ?? `#${s.exerciseId}`, ex?.muscles.join('; '), ex?.type,
         n, s.weight, s.reps, s.distance, s.duration, s.notes,
       ]));
     }
@@ -207,15 +207,27 @@ function parseExercise(raw: unknown, i: number, ids: Set<number>, names: Set<str
   const key = name.trim().toLowerCase();
   if (names.has(key)) fail(`${where}: duplicate exercise name (names must be unique, ignoring case).`);
   names.add(key);
-  if (!MUSCLE_GROUPS.includes(raw.muscleGroup as MuscleGroup)) {
-    fail(`${where}: unknown muscle group ${JSON.stringify(raw.muscleGroup)}. Expected one of ${MUSCLE_GROUPS.join(', ')}.`);
+  let muscles: Muscle[];
+  if (raw.muscles !== undefined) {
+    const list = raw.muscles;
+    if (!Array.isArray(list) || list.length === 0) fail(`${where}: "muscles" must be a non-empty list.`);
+    for (const m of list) {
+      if (!MUSCLES.includes(m as Muscle)) fail(`${where}: unknown muscle ${JSON.stringify(m)}. Expected one of ${MUSCLES.join(', ')}.`);
+    }
+    if (new Set(list).size !== list.length) fail(`${where}: "muscles" lists the same muscle twice.`);
+    muscles = list as Muscle[];
+  } else {
+    // Pre-v3 backups have a single muscleGroup (with the old "Arms"/"Back" groups).
+    const legacy = typeof raw.muscleGroup === 'string' ? legacyMuscles(name, raw.muscleGroup) : null;
+    if (!legacy) fail(`${where}: unknown muscle group ${JSON.stringify(raw.muscleGroup)}.`);
+    muscles = legacy;
   }
   if (raw.type !== 'strength' && raw.type !== 'cardio') fail(`${where}: "type" must be "strength" or "cardio".`);
   if (raw.archived !== undefined && typeof raw.archived !== 'boolean') fail(`${where}: "archived" must be true or false.`);
   return {
     id,
     name,
-    muscleGroup: raw.muscleGroup as MuscleGroup,
+    muscles,
     type: raw.type,
     archived: raw.archived ?? false,
     createdAt: reqTimestamp(raw, 'createdAt', where),

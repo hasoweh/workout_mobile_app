@@ -1,3 +1,4 @@
+import { musclesLabel } from '../../components/muscle-chips';
 import { db, type Exercise, type Workout, type WorkoutSet } from '../../db';
 import { groupBy, lastSessionSets, sortSets } from '../../lib/analytics';
 import { h } from '../../lib/dom';
@@ -102,7 +103,7 @@ function buildDetail(data: DetailData, reload: () => Promise<void>): Node[] {
       h('div', { class: 'spread' },
         h('div', {},
           h('h2', {}, sec.exercise?.name ?? 'Unknown exercise'),
-          sec.exercise ? h('div', { class: 'muted small' }, sec.exercise.muscleGroup) : null,
+          sec.exercise ? h('div', { class: 'muted small' }, musclesLabel(sec.exercise.muscles)) : null,
         ),
         h('button', { class: 'btn-ghost', onclick: () => void openSetSheet(data, sec, null, reload) }, '+ Add set'),
       ),

@@ -1,5 +1,5 @@
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, BarController, BarElement, Tooltip } from 'chart.js';
-import { MUSCLE_GROUPS, type MuscleGroup } from '../../db';
+import { MUSCLES, type Muscle } from '../../db';
 
 // Tree-shaken Chart.js: only what the Progress tab uses.
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, BarController, BarElement, Tooltip);
@@ -65,12 +65,12 @@ export function theme(): Theme {
   return t;
 }
 
-// Fixed categorical palette (validated for color-vision deficiency), one slot per muscle group in MUSCLE_GROUPS order.
-const PALETTE_LIGHT = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948'];
-const PALETTE_DARK = ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9', '#e66767'];
+// Fixed categorical palette, one slot per muscle in MUSCLES order.
+const PALETTE_LIGHT = ['#2a78d6', '#eb6834', '#8b5a2b', '#1baf7a', '#eda100', '#e87ba4', '#0f8b8d', '#008300', '#6250d6', '#e34948', '#6b7280'];
+const PALETTE_DARK = ['#3987e5', '#d95926', '#b07a45', '#199e70', '#c98500', '#d55181', '#22a5a7', '#2e9e2e', '#9085e9', '#e66767', '#9ca3af'];
 
-export function muscleColor(group: MuscleGroup, dark: boolean): string {
-  const i = Math.max(0, MUSCLE_GROUPS.indexOf(group));
+export function muscleColor(group: Muscle, dark: boolean): string {
+  const i = Math.max(0, MUSCLES.indexOf(group));
   return (dark ? PALETTE_DARK : PALETTE_LIGHT)[i % PALETTE_LIGHT.length];
 }
 

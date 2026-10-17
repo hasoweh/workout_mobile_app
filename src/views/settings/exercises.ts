@@ -1,8 +1,9 @@
-import { db, MUSCLE_GROUPS, type Exercise, type ExerciseType, type MuscleGroup } from '../../db';
+import { db, MUSCLES, type Exercise, type ExerciseType, type Muscle } from '../../db';
+import { muscleChips } from '../../components/muscle-chips';
 import { h } from '../../lib/dom';
 import { confirmDialog, openSheet, toast } from '../../lib/ui';
 
-/** "Exercises" settings card: searchable list grouped by muscle group, tap to edit. */
+/** "Exercises" settings card: searchable list grouped by primary muscle, tap to edit. */
 export async function exercisesSection(): Promise<HTMLElement> {
   const card = h('section', { class: 'card stack' });
   let query = '';
@@ -31,19 +32,20 @@ export async function exercisesSection(): Promise<HTMLElement> {
 }
 
 function renderList(el: HTMLElement, exercises: Exercise[], query: string, onPick: (ex: Exercise) => void): void {
-  const matches = exercises.filter((e) => !query || e.name.toLowerCase().includes(query) || e.muscleGroup.toLowerCase().includes(query));
+  const matches = exercises.filter((e) => !query || e.name.toLowerCase().includes(query) || e.muscles.some((m) => m.toLowerCase().includes(query)));
   const item = (ex: Exercise) =>
     h('li', {},
       h('button', { class: 'settings-ex-item', onclick: () => onPick(ex) },
-        h('span', { class: 'grow' }, ex.name),
-        ex.type === 'cardio' && ex.muscleGroup !== 'Cardio' ? h('span', { class: 'muted small' }, 'cardio') : null,
+        h('span', { class: 'grow' }, ex.name,
+          ex.muscles.length > 1 ? h('span', { class: 'muted small settings-block' }, `also ${ex.muscles.slice(1).join(', ')}`) : null),
+        ex.type === 'cardio' && ex.muscles[0] !== 'Cardio' ? h('span', { class: 'muted small' }, 'cardio') : null,
         h('span', { class: 'muted', 'aria-hidden': 'true' }, '›'),
       ),
     );
 
   const groups: HTMLElement[] = [];
-  for (const group of MUSCLE_GROUPS) {
-    const inGroup = matches.filter((e) => !e.archived && e.muscleGroup === group);
+  for (const group of MUSCLES) {
+    const inGroup = matches.filter((e) => !e.archived && e.muscles[0] === group);
     if (inGroup.length === 0) continue;
     groups.push(h('div', {},
       h('h3', { class: 'settings-ex-group' }, group),
@@ -64,7 +66,7 @@ function renderList(el: HTMLElement, exercises: Exercise[], query: string, onPic
 /** Edit sheet for an exercise, or a "new exercise" sheet when `ex` is null. */
 async function openEditor(ex: Exercise | null, onChange: () => Promise<void>): Promise<void> {
   const setCount = ex ? await db.sets.where('exerciseId').equals(ex.id).count() : 0;
-  let muscleGroup: MuscleGroup | null = ex?.muscleGroup ?? null;
+  let muscles: Muscle[] = ex?.muscles ?? [];
   let type: ExerciseType = ex?.type ?? 'strength';
   let archived = ex?.archived ?? false;
 
@@ -88,12 +90,12 @@ async function openEditor(ex: Exercise | null, onChange: () => Promise<void>): P
   const save = async () => {
     const trimmed = name.value.trim().replace(/\s+/g, ' ');
     if (!trimmed) return showError('Enter a name.');
-    if (!muscleGroup) return showError('Pick a muscle group.');
+    if (muscles.length === 0) return showError('Pick a primary muscle.');
     const clash = (await db.exercises.toArray()).find((e) => e.id !== ex?.id && e.name.toLowerCase() === trimmed.toLowerCase());
     if (clash) return showError(`"${clash.name}" already exists${clash.archived ? ' (archived)' : ''}.`);
     try {
-      if (ex) await db.exercises.update(ex.id, { name: trimmed, muscleGroup, type, archived });
-      else await db.exercises.add({ name: trimmed, muscleGroup, type, archived, createdAt: Date.now() } as Exercise);
+      if (ex) await db.exercises.update(ex.id, { name: trimmed, muscles, type, archived });
+      else await db.exercises.add({ name: trimmed, muscles, type, archived, createdAt: Date.now() } as Exercise);
     } catch (err) {
       if (err instanceof Error && err.name === 'ConstraintError') return showError('An exercise with that name already exists.');
       return showError(`Could not save: ${err instanceof Error ? err.message : String(err)}`);
@@ -125,7 +127,7 @@ async function openEditor(ex: Exercise | null, onChange: () => Promise<void>): P
 
   const content = h('div', { class: 'stack' },
     h('div', {}, h('label', { for: 'settings-ex-name' }, 'Name'), name),
-    h('div', {}, h('label', {}, 'Muscle group'), chipRow(MUSCLE_GROUPS, () => muscleGroup, (v) => { muscleGroup = v; })),
+    muscleChips(muscles, (m) => { muscles = m; }),
     h('div', {}, h('label', {}, 'Type'), chipRow(['strength', 'cardio'] as const, () => type, (v) => { type = v; })),
     ex ? archiveToggle : null,
     ex ? h('p', { class: 'muted small' }, setCount === 1 ? '1 set logged.' : `${setCount} sets logged.`) : null,

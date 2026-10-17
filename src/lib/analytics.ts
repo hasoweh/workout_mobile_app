@@ -1,4 +1,4 @@
-import { db, type Exercise, type Workout, type WorkoutSet } from '../db';
+import { db, type Exercise, type Muscle, type Workout, type WorkoutSet } from '../db';
 
 /** Epley estimated one-rep max. Returns the weight itself for single reps. */
 export function e1rm(weight: number, reps: number): number {
@@ -127,6 +127,11 @@ export async function newPRsInWorkout(workoutId: number): Promise<Array<NewPR & 
       result.push({ exercise, kind: 'duration', label: 'Longest duration', value: now.longestDuration.duration });
   }
   return result;
+}
+
+/** Credit one set gives each muscle: 1 for the primary, ½ for each secondary ("fractional sets"). */
+export function muscleShares(ex: Exercise): Array<[Muscle, number]> {
+  return ex.muscles.map((m, i) => [m, i === 0 ? 1 : 0.5]);
 }
 
 /** Monday 00:00 local time of the week containing `ms`. */

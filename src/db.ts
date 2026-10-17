@@ -2,13 +2,16 @@ import Dexie, { type EntityTable } from 'dexie';
 
 export type ExerciseType = 'strength' | 'cardio';
 
-export const MUSCLE_GROUPS = ['Chest', 'Back', 'Legs', 'Glutes', 'Shoulders', 'Arms', 'Core', 'Cardio'] as const;
-export type MuscleGroup = (typeof MUSCLE_GROUPS)[number];
+export const MUSCLES = [
+  'Chest', 'Upper Back', 'Lower Back', 'Shoulders', 'Biceps', 'Triceps', 'Forearms', 'Legs', 'Glutes', 'Core', 'Cardio',
+] as const;
+export type Muscle = (typeof MUSCLES)[number];
 
 export interface Exercise {
   id: number;
   name: string;
-  muscleGroup: MuscleGroup;
+  /** Muscles worked, primary first (at least one). The primary decides grouping in lists. */
+  muscles: Muscle[];
   type: ExerciseType;
   archived: boolean;
   createdAt: number;
@@ -71,6 +74,17 @@ db.version(2)
     await addMissingDefaults(tx.table('exercises'));
   });
 
+// v3: single `muscleGroup` → `muscles` list; "Arms" split into Biceps/Triceps/Forearms, "Back" into Upper/Lower Back.
+db.version(3)
+  .stores({ exercises: '++id, &name, *muscles, type' })
+  .upgrade(async (tx) => {
+    await tx.table('exercises').toCollection().modify((e: Exercise & { muscleGroup?: string }) => {
+      e.muscles = defaultMuscles(e.name) ?? legacyMuscles(e.name, e.muscleGroup ?? '') ?? ['Core'];
+      delete e.muscleGroup;
+    });
+    await addMissingDefaults(tx.table('exercises'));
+  });
+
 db.on('populate', (tx) => addMissingDefaults(tx.table('exercises')));
 
 async function addMissingDefaults(table: Dexie.Table<Exercise, number>): Promise<void> {
@@ -78,63 +92,84 @@ async function addMissingDefaults(table: Dexie.Table<Exercise, number>): Promise
   const now = Date.now();
   const missing = DEFAULT_EXERCISES.filter(([name]) => !existing.has(name.toLowerCase()));
   await table.bulkAdd(
-    missing.map(([name, muscleGroup, type]) => ({ name, muscleGroup, type, archived: false, createdAt: now }) as Exercise),
+    missing.map(([name, muscles, type]) => ({ name, muscles, type, archived: false, createdAt: now }) as Exercise),
   );
 }
 
-const DEFAULT_EXERCISES: Array<[string, MuscleGroup, ExerciseType]> = [
-  ['Bench Press', 'Chest', 'strength'],
-  ['Incline Bench Press', 'Chest', 'strength'],
-  ['Dumbbell Bench Press', 'Chest', 'strength'],
-  ['Incline Dumbbell Press', 'Chest', 'strength'],
-  ['Chest Fly (Machine)', 'Chest', 'strength'],
-  ['Cable Crossover', 'Chest', 'strength'],
-  ['Push-up', 'Chest', 'strength'],
-  ['Dip', 'Chest', 'strength'],
-  ['Deadlift', 'Back', 'strength'],
-  ['Barbell Row', 'Back', 'strength'],
-  ['Dumbbell Row', 'Back', 'strength'],
-  ['Pull-up', 'Back', 'strength'],
-  ['Chin-up', 'Back', 'strength'],
-  ['Lat Pulldown', 'Back', 'strength'],
-  ['Seated Cable Row', 'Back', 'strength'],
-  ['T-Bar Row', 'Back', 'strength'],
-  ['Squat', 'Legs', 'strength'],
-  ['Front Squat', 'Legs', 'strength'],
-  ['Leg Press', 'Legs', 'strength'],
-  ['Bulgarian Split Squat', 'Legs', 'strength'],
-  ['Lunge', 'Legs', 'strength'],
-  ['Leg Extension', 'Legs', 'strength'],
-  ['Leg Curl', 'Legs', 'strength'],
-  ['Romanian Deadlift', 'Legs', 'strength'],
-  ['Calf Raise', 'Legs', 'strength'],
-  ['Hip Thrust', 'Glutes', 'strength'],
-  ['Glute Bridge', 'Glutes', 'strength'],
-  ['Hip Abduction (Machine)', 'Glutes', 'strength'],
-  ['Overhead Press', 'Shoulders', 'strength'],
-  ['Dumbbell Shoulder Press', 'Shoulders', 'strength'],
-  ['Lateral Raise', 'Shoulders', 'strength'],
-  ['Rear Delt Fly', 'Shoulders', 'strength'],
-  ['Face Pull', 'Shoulders', 'strength'],
-  ['Shrug', 'Shoulders', 'strength'],
-  ['Barbell Curl', 'Arms', 'strength'],
-  ['Dumbbell Curl', 'Arms', 'strength'],
-  ['Hammer Curl', 'Arms', 'strength'],
-  ['Triceps Pushdown', 'Arms', 'strength'],
-  ['Overhead Triceps Extension', 'Arms', 'strength'],
-  ['Skull Crusher', 'Arms', 'strength'],
-  ['Close-Grip Bench Press', 'Arms', 'strength'],
-  ['Plank', 'Core', 'strength'],
-  ['Hanging Leg Raise', 'Core', 'strength'],
-  ['Cable Crunch', 'Core', 'strength'],
-  ['Ab Wheel Rollout', 'Core', 'strength'],
-  ['Running', 'Cardio', 'cardio'],
-  ['Treadmill', 'Cardio', 'cardio'],
-  ['Cycling', 'Cardio', 'cardio'],
-  ['Rowing Machine', 'Cardio', 'cardio'],
-  ['Elliptical', 'Cardio', 'cardio'],
-  ['Stair Climber', 'Cardio', 'cardio'],
-  ['Walking', 'Cardio', 'cardio'],
+function defaultMuscles(name: string): Muscle[] | undefined {
+  const lower = name.toLowerCase();
+  return DEFAULT_EXERCISES.find(([n]) => n.toLowerCase() === lower)?.[1];
+}
+
+/** Maps a pre-v3 single muscle group to the new muscles. Null if the group is unknown. */
+export function legacyMuscles(name: string, group: string): Muscle[] | null {
+  if (group === 'Arms') {
+    if (/tricep|skull|pushdown|push-down|close.grip|kickback|extension|dip/i.test(name)) return ['Triceps'];
+    if (/wrist|forearm|grip|farmer/i.test(name)) return ['Forearms'];
+    return ['Biceps'];
+  }
+  if (group === 'Back') {
+    return /deadlift|back extension|hyperextension|good morning|superman/i.test(name) ? ['Lower Back'] : ['Upper Back'];
+  }
+  return (MUSCLES as readonly string[]).includes(group) ? [group as Muscle] : null;
+}
+
+const DEFAULT_EXERCISES: Array<[string, Muscle[], ExerciseType]> = [
+  ['Bench Press', ['Chest', 'Triceps', 'Shoulders'], 'strength'],
+  ['Incline Bench Press', ['Chest', 'Shoulders', 'Triceps'], 'strength'],
+  ['Dumbbell Bench Press', ['Chest', 'Triceps', 'Shoulders'], 'strength'],
+  ['Incline Dumbbell Press', ['Chest', 'Shoulders', 'Triceps'], 'strength'],
+  ['Chest Fly (Machine)', ['Chest'], 'strength'],
+  ['Cable Crossover', ['Chest'], 'strength'],
+  ['Push-up', ['Chest', 'Triceps', 'Shoulders'], 'strength'],
+  ['Dip', ['Chest', 'Triceps', 'Shoulders'], 'strength'],
+  ['Deadlift', ['Lower Back', 'Glutes', 'Legs', 'Upper Back', 'Forearms'], 'strength'],
+  ['Back Extension', ['Lower Back', 'Glutes'], 'strength'],
+  ['Barbell Row', ['Upper Back', 'Biceps', 'Lower Back'], 'strength'],
+  ['Dumbbell Row', ['Upper Back', 'Biceps'], 'strength'],
+  ['Pull-up', ['Upper Back', 'Biceps'], 'strength'],
+  ['Chin-up', ['Upper Back', 'Biceps'], 'strength'],
+  ['Lat Pulldown', ['Upper Back', 'Biceps'], 'strength'],
+  ['Seated Cable Row', ['Upper Back', 'Biceps'], 'strength'],
+  ['T-Bar Row', ['Upper Back', 'Biceps', 'Lower Back'], 'strength'],
+  ['Shrug', ['Upper Back', 'Forearms'], 'strength'],
+  ['Squat', ['Legs', 'Glutes', 'Lower Back'], 'strength'],
+  ['Front Squat', ['Legs', 'Glutes', 'Core'], 'strength'],
+  ['Leg Press', ['Legs', 'Glutes'], 'strength'],
+  ['Bulgarian Split Squat', ['Legs', 'Glutes'], 'strength'],
+  ['Lunge', ['Legs', 'Glutes'], 'strength'],
+  ['Leg Extension', ['Legs'], 'strength'],
+  ['Leg Curl', ['Legs'], 'strength'],
+  ['Romanian Deadlift', ['Legs', 'Glutes', 'Lower Back'], 'strength'],
+  ['Calf Raise', ['Legs'], 'strength'],
+  ['Hip Thrust', ['Glutes', 'Legs'], 'strength'],
+  ['Glute Bridge', ['Glutes'], 'strength'],
+  ['Hip Abduction (Machine)', ['Glutes'], 'strength'],
+  ['Overhead Press', ['Shoulders', 'Triceps'], 'strength'],
+  ['Dumbbell Shoulder Press', ['Shoulders', 'Triceps'], 'strength'],
+  ['Lateral Raise', ['Shoulders'], 'strength'],
+  ['Rear Delt Fly', ['Shoulders', 'Upper Back'], 'strength'],
+  ['Face Pull', ['Shoulders', 'Upper Back'], 'strength'],
+  ['Barbell Curl', ['Biceps', 'Forearms'], 'strength'],
+  ['Dumbbell Curl', ['Biceps', 'Forearms'], 'strength'],
+  ['Hammer Curl', ['Biceps', 'Forearms'], 'strength'],
+  ['Triceps Pushdown', ['Triceps'], 'strength'],
+  ['Overhead Triceps Extension', ['Triceps'], 'strength'],
+  ['Skull Crusher', ['Triceps'], 'strength'],
+  ['Close-Grip Bench Press', ['Triceps', 'Chest'], 'strength'],
+  ['Wrist Curl', ['Forearms'], 'strength'],
+  ["Farmer's Carry", ['Forearms', 'Upper Back', 'Core'], 'strength'],
+  ['Plank', ['Core'], 'strength'],
+  ['Hanging Leg Raise', ['Core', 'Forearms'], 'strength'],
+  ['Cable Crunch', ['Core'], 'strength'],
+  ['Ab Wheel Rollout', ['Core'], 'strength'],
+  ['Running', ['Cardio'], 'cardio'],
+  ['Treadmill', ['Cardio'], 'cardio'],
+  ['Cycling', ['Cardio'], 'cardio'],
+  ['Rowing Machine', ['Cardio'], 'cardio'],
+  ['Elliptical', ['Cardio'], 'cardio'],
+  ['Stair Climber', ['Cardio'], 'cardio'],
+  ['Walking', ['Cardio'], 'cardio'],
 ];
 
 /** Ask the browser not to evict our data under storage pressure. */

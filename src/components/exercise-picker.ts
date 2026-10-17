@@ -1,4 +1,5 @@
-import { db, MUSCLE_GROUPS, type Exercise, type ExerciseType, type MuscleGroup } from '../db';
+import { db, MUSCLES, type Exercise, type ExerciseType, type Muscle } from '../db';
+import { muscleChips, musclesLabel } from './muscle-chips';
 import { h } from '../lib/dom';
 import { openSheet, toast } from '../lib/ui';
 import './exercise-picker.css';
@@ -33,7 +34,7 @@ export function pickExercise(opts: { exclude?: number[]; title?: string } = {}):
       h('button', { type: 'button', class: 'picker-row', onclick: () => choose(ex) },
         h('span', { class: 'picker-row-name' }, ex.name),
         showGroup || ex.type === 'cardio'
-          ? h('span', { class: 'picker-row-meta' }, showGroup ? `${ex.muscleGroup}${ex.type === 'cardio' ? ' · cardio' : ''}` : 'cardio')
+          ? h('span', { class: 'picker-row-meta' }, showGroup ? `${musclesLabel(ex.muscles)}${ex.type === 'cardio' && ex.muscles[0] !== 'Cardio' ? ' · cardio' : ''}` : 'cardio')
           : null,
       );
 
@@ -45,7 +46,7 @@ export function pickExercise(opts: { exclude?: number[]; title?: string } = {}):
 
     const matches = (q: string) => {
       const lq = q.toLowerCase();
-      return all.filter((e) => e.name.toLowerCase().includes(lq))
+      return all.filter((e) => e.name.toLowerCase().includes(lq) || e.muscles.some((m) => m.toLowerCase().includes(lq)))
         .sort((a, b) => rank(a.name, lq) - rank(b.name, lq) || a.name.localeCompare(b.name));
     };
 
@@ -55,7 +56,7 @@ export function pickExercise(opts: { exclude?: number[]; title?: string } = {}):
       if (!q) {
         body.replaceChildren(...[
           section('Recent', recent),
-          ...MUSCLE_GROUPS.map((g) => section(g, all.filter((e) => e.muscleGroup === g))),
+          ...MUSCLES.map((m) => section(m, all.filter((e) => e.muscles[0] === m))),
         ].filter((s): s is HTMLElement => s !== null));
         if (all.length === 0) body.append(h('p', { class: 'empty' }, 'No exercises yet. Type a name to create one.'));
         return;
@@ -72,38 +73,34 @@ export function pickExercise(opts: { exclude?: number[]; title?: string } = {}):
       body.replaceChildren(...children.filter((c): c is Node => c !== null));
     };
 
-    // Inline "new exercise" form: muscle group (required) and type.
+    // Inline "new exercise" form: muscles (primary required) and type.
     const createForm = (initialName: string): HTMLElement => {
-      let group: MuscleGroup | null = null;
+      let muscles: Muscle[] = [];
       let type: ExerciseType = 'strength';
       let typeTouched = false;
       const nameIn = h('input', { type: 'text', value: initialName, autocomplete: 'off', 'aria-label': 'Exercise name' });
-      const groupChips = h('div', { class: 'chips' });
+      const groupChips = muscleChips([], (m) => {
+        muscles = m;
+        if (!typeTouched) type = m[0] === 'Cardio' ? 'cardio' : 'strength';
+        paint();
+      });
       const typeChips = h('div', { class: 'chips' });
       const saveBtn = h('button', { type: 'button', class: 'btn-block btn-lg', disabled: true }, 'Save & add');
 
       const paint = () => {
-        groupChips.replaceChildren(...MUSCLE_GROUPS.map((g) => h('button', {
-          type: 'button', class: `chip${g === group ? ' active' : ''}`,
-          onclick: () => {
-            group = g;
-            if (!typeTouched) type = g === 'Cardio' ? 'cardio' : 'strength';
-            paint();
-          },
-        }, g)));
         typeChips.replaceChildren(...(['strength', 'cardio'] as const).map((t) => h('button', {
           type: 'button', class: `chip${t === type ? ' active' : ''}`,
           onclick: () => { type = t; typeTouched = true; paint(); },
         }, t === 'strength' ? 'Strength' : 'Cardio')));
-        saveBtn.disabled = group === null;
+        saveBtn.disabled = muscles.length === 0;
       };
 
       saveBtn.addEventListener('click', () => {
         const name = nameIn.value.trim().replace(/\s+/g, ' ');
         if (!name) { toast('Enter a name'); return; }
-        if (!group) { toast('Pick a muscle group'); return; }
+        if (muscles.length === 0) { toast('Pick a primary muscle'); return; }
         saveBtn.disabled = true;
-        createExercise(name, group, type)
+        createExercise(name, muscles, type)
           .then((ex) => { if (ex) choose(ex); else saveBtn.disabled = false; })
           .catch((err: unknown) => { console.error(err); toast('Could not save exercise'); saveBtn.disabled = false; });
       });
@@ -111,7 +108,7 @@ export function pickExercise(opts: { exclude?: number[]; title?: string } = {}):
       paint();
       return h('div', { class: 'card stack picker-form' },
         h('div', {}, h('label', {}, 'Name'), nameIn),
-        h('div', {}, h('label', {}, 'Muscle group'), groupChips),
+        groupChips,
         h('div', {}, h('label', {}, 'Type'), typeChips),
         saveBtn,
         h('button', { type: 'button', class: 'btn-ghost', onclick: () => { creating = false; renderBody(); } }, 'Cancel'),
@@ -168,7 +165,7 @@ async function loadData(exclude: Set<number>): Promise<{ all: Exercise[]; recent
 }
 
 /** Creates an exercise, or reuses (and un-archives) an existing one with the same name. */
-async function createExercise(name: string, muscleGroup: MuscleGroup, type: ExerciseType): Promise<Exercise | null> {
+async function createExercise(name: string, muscles: Muscle[], type: ExerciseType): Promise<Exercise | null> {
   const lower = name.toLowerCase();
   const existing = await db.exercises.filter((e) => e.name.toLowerCase() === lower).first();
   if (existing) {
@@ -177,7 +174,7 @@ async function createExercise(name: string, muscleGroup: MuscleGroup, type: Exer
     return { ...existing, archived: false };
   }
   try {
-    const id = await db.exercises.add({ name, muscleGroup, type, archived: false, createdAt: Date.now() });
+    const id = await db.exercises.add({ name, muscles, type, archived: false, createdAt: Date.now() });
     return (await db.exercises.get(id)) ?? null;
   } catch (err) {
     if (err instanceof Error && err.name === 'ConstraintError') {
