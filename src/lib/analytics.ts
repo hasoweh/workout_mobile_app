@@ -123,6 +123,8 @@ export async function newPRsInWorkout(workoutId: number): Promise<Array<NewPR & 
     }
     if (now.longestDistance && before.longestDistance && now.longestDistance.distance > before.longestDistance.distance)
       result.push({ exercise, kind: 'distance', label: 'Longest distance', value: now.longestDistance.distance });
+    if (now.longestDuration && before.longestDuration && now.longestDuration.duration > before.longestDuration.duration)
+      result.push({ exercise, kind: 'duration', label: 'Longest duration', value: now.longestDuration.duration });
   }
   return result;
 }

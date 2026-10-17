@@ -7,7 +7,10 @@ export function openSheet(content: Node, opts: { title?: string; onClose?: () =>
     document.removeEventListener('keydown', onKey);
     opts.onClose?.();
   };
-  const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close();
+  // Only the topmost sheet reacts to Escape, so a confirm over a sheet doesn't close both.
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key === 'Escape' && [...document.querySelectorAll('.sheet-backdrop')].at(-1) === backdrop) close();
+  };
   const sheet = h('div', { class: 'sheet', role: 'dialog', 'aria-modal': 'true' },
     opts.title ? h('div', { class: 'sheet-header' }, h('h2', {}, opts.title), h('button', { class: 'btn-icon', 'aria-label': 'Close', onclick: () => close() }, '✕')) : null,
     content,

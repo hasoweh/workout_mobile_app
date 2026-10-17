@@ -1,0 +1,30 @@
+/* Exercise picker sheet */
+.picker { display: flex; flex-direction: column; gap: 12px; }
+.picker-search-wrap {
+  position: sticky; top: -16px; z-index: 1;
+  margin: -4px -16px 0; padding: 4px 16px 8px; background: var(--bg);
+}
+.picker-search { font-size: 1.05rem; }
+.picker-body { display: flex; flex-direction: column; gap: 16px; min-height: 40vh; }
+.picker-hint { margin: 8px 0; }
+.picker-section-title {
+  margin: 0 0 6px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.04em; color: var(--muted);
+}
+.picker-rows {
+  display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden;
+}
+.picker-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  width: 100%; min-height: 52px; padding: 0 16px; border-radius: 0;
+  background: transparent; color: var(--text); font-weight: 500; text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.picker-row:last-child { border-bottom: 0; }
+.picker-row:active:not(:disabled) { transform: none; background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.picker-row-meta { color: var(--muted); font-size: 0.85rem; font-weight: 400; white-space: nowrap; }
+.picker-create {
+  border: 1px dashed var(--accent); border-radius: 14px; color: var(--accent); font-weight: 600;
+}
+.picker-form .chips { margin-top: 2px; }

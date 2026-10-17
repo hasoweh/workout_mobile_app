@@ -21,7 +21,9 @@ src/
   main.ts          entry: registers service worker, requests persistent storage, starts router
   db.ts            Dexie schema + types (exercises, workouts, sets), default exercise seed
   router.ts        hash router (#/log, #/history, ...)
-  views/           one module per tab
+  lib/             shared logic: settings, units/formatting, analytics (e1RM, PRs), backup (JSON/CSV), DOM + UI helpers
+  components/      exercise picker
+  views/           one module per tab (log, history, progress, settings), with subfolders for larger tabs
   styles.css       theme tokens (auto dark mode), large tap targets
 public/            icons (generated from icon.svg)
 ```
