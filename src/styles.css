@@ -4,6 +4,8 @@
   --text: #15171c;
   --muted: #6b7280;
   --accent: #16a34a;
+  --blue: #93c5fd;
+  --on-blue: #0b2545;
   --border: #e5e7eb;
   --tap: 48px;
   color-scheme: light dark;
@@ -16,6 +18,8 @@
     --text: #e8eaed;
     --muted: #9aa0a6;
     --accent: #4ade80;
+    --blue: #8ab4f8;
+    --on-blue: #0b1d3a;
     --border: #2a2e37;
   }
 }
