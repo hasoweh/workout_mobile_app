@@ -305,6 +305,10 @@ function parseSettings(raw: unknown): BackupSettings {
     if (!isFiniteNum(obj.weightStep) || obj.weightStep <= 0) fail('Settings: "weightStep" must be a positive number.');
     out.weightStep = obj.weightStep;
   }
+  if (obj.restSeconds !== undefined) {
+    if (!isFiniteNum(obj.restSeconds) || obj.restSeconds < 0) fail('Settings: "restSeconds" must be a non-negative number.');
+    out.restSeconds = obj.restSeconds;
+  }
   return out;
 }
 

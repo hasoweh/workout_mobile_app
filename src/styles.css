@@ -6,6 +6,7 @@
   --accent: #16a34a;
   --blue: #93c5fd;
   --on-blue: #0b2545;
+  --link: #1d4ed8;
   --border: #e5e7eb;
   --tap: 48px;
   color-scheme: light dark;
@@ -20,6 +21,7 @@
     --accent: #4ade80;
     --blue: #8ab4f8;
     --on-blue: #0b1d3a;
+    --link: #8ab4f8;
     --border: #2a2e37;
   }
 }
@@ -48,8 +50,9 @@ button {
   padding: 0 16px;
   border: 0;
   border-radius: 12px;
-  background: var(--accent);
-  color: #000;
+  /* Default (primary) buttons are pastel blue; green is reserved for .btn-go (start/finish). */
+  background: var(--blue);
+  color: var(--on-blue);
   font: inherit;
   font-weight: 600;
 }
@@ -91,9 +94,10 @@ input, select {
 button { cursor: pointer; }
 button:disabled { opacity: 0.5; }
 button:active:not(:disabled) { transform: scale(0.98); }
+.btn-go { background: var(--accent); color: #000; }
 .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
 .btn-danger { background: #dc2626; color: #fff; }
-.btn-ghost { background: transparent; color: var(--accent); }
+.btn-ghost { background: transparent; color: var(--link); }
 .btn-icon { min-height: 40px; min-width: 40px; padding: 0; background: transparent; color: var(--muted); font-size: 1.2rem; }
 .btn-block { width: 100%; }
 .btn-lg { min-height: 56px; font-size: 1.1rem; }
@@ -121,7 +125,7 @@ label { display: block; font-size: 0.875rem; color: var(--muted); margin-bottom:
   min-height: 48px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--border);
   background: var(--surface); color: var(--text); font-weight: 500;
 }
-.chip.active { background: var(--accent); border-color: var(--accent); color: #000; }
+.chip.active { background: var(--blue); border-color: var(--blue); color: var(--on-blue); }
 
 .banner { padding: 12px 16px; border-radius: 12px; background: color-mix(in srgb, var(--accent) 15%, var(--surface)); }
 

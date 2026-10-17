@@ -12,10 +12,10 @@ const STEP_OPTIONS: Record<Units, number[]> = { kg: [1, 1.25, 2.5, 5], lb: [2.5,
 const DEFAULT_STEP: Record<Units, number> = { kg: 2.5, lb: 5 };
 
 export async function settingsView(root: HTMLElement): Promise<void> {
-  const [backup, units, exercises, storage] = await Promise.all([
-    backupSection(), unitsSection(), exercisesSection(), storageSection(),
+  const [backup, units, rest, exercises, storage] = await Promise.all([
+    backupSection(), unitsSection(), restSection(), exercisesSection(), storageSection(),
   ]);
-  root.append(h('div', { class: 'stack settings' }, h('h1', {}, 'Settings'), backup, units, exercises, storage, aboutSection()));
+  root.append(h('div', { class: 'stack settings' }, h('h1', {}, 'Settings'), backup, units, rest, exercises, storage, aboutSection()));
 }
 
 /** Re-renders a section in place (keeps scroll position, unlike a full route refresh). */
@@ -167,6 +167,29 @@ async function unitsSection(): Promise<HTMLElement> {
         chip(String(step), step === weightStep, () => setSetting('weightStep', step)))),
     ),
     h('p', { class: 'muted small' }, 'Weights are stored in kg, so switching units never changes your data.'),
+  );
+  return card;
+}
+
+// ---- Rest timer ----
+
+const REST_OPTIONS: Array<[number, string]> = [[0, 'Off'], [60, '1:00'], [90, '1:30'], [120, '2:00'], [180, '3:00'], [240, '4:00']];
+
+async function restSection(): Promise<HTMLElement> {
+  const { restSeconds } = await getSettings();
+  const card = h('section', { class: 'card stack' });
+  const rerender = () => replace(card, restSection);
+  card.append(
+    h('h2', { class: 'settings-h2' }, 'Rest timer'),
+    h('div', {},
+      h('label', {}, 'Starts after each logged set'),
+      h('div', { class: 'chips' }, ...REST_OPTIONS.map(([secs, label]) =>
+        h('button', {
+          class: `chip settings-chip${secs === restSeconds ? ' active' : ''}`, 'aria-pressed': String(secs === restSeconds),
+          onclick: () => void setSetting('restSeconds', secs).then(rerender).catch((err: unknown) => toast(`Failed: ${errMsg(err)}`)),
+        }, label))),
+    ),
+    h('p', { class: 'muted small' }, 'Use −15 / +15 on the timer to adjust a single rest. The phone vibrates when rest is over while the app is open.'),
   );
   return card;
 }

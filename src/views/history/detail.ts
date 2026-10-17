@@ -1,15 +1,15 @@
 import { workoutNameInput } from '../../components/workout-name';
 import { musclesLabel } from '../../components/muscle-chips';
 import { db, type Exercise, type Workout, type WorkoutSet } from '../../db';
-import { groupBy, lastSessionSets, sortSets } from '../../lib/analytics';
+import { groupBy, lastSessionSets, setsDistance, setsVolume, sortSets } from '../../lib/analytics';
 import { h } from '../../lib/dom';
-import { formatDate, formatDuration, formatTime, fromDisplayWeight, parseDuration, toDisplayWeight } from '../../lib/format';
-import { getSettings, type Settings } from '../../lib/settings';
-import { confirmDialog, go, openSheet, toast } from '../../lib/ui';
 import {
-  formatDistance, formatSet, formatVolume, fromLocalInputValue, isCardio, safe, setsDistance, setsVolume,
-  toLocalInputValue, workoutDuration,
-} from './shared';
+  formatDate, formatDistance, formatDuration, formatSet, formatTime, formatVolume, fromDisplayWeight, isCardio, parseDuration, toDisplayWeight,
+} from '../../lib/format';
+import { getSettings, type Settings } from '../../lib/settings';
+import { confirmDialog, go, openSheet, safe, toast } from '../../lib/ui';
+import { deleteWorkout as removeWorkout, getActiveWorkout, startWorkout } from '../../lib/workouts';
+import { fromLocalInputValue, toLocalInputValue, workoutDuration } from './shared';
 
 interface Section {
   exerciseId: number;
@@ -147,13 +147,12 @@ function buildDetail(data: DetailData, reload: () => Promise<void>): Node[] {
 // ---- Workout-level actions ----
 
 async function repeatWorkout(exerciseIds: number[], name?: string): Promise<void> {
-  const active = await db.workouts.filter((w) => w.endedAt === undefined).first();
-  if (active) {
+  if (await getActiveWorkout()) {
     if (await confirmDialog('A workout is already in progress. Finish it before repeating this one.', { confirmLabel: 'Go to workout' }))
       go('log');
     return;
   }
-  await db.workouts.add({ startedAt: Date.now(), exerciseIds, ...(name ? { name } : {}) });
+  await startWorkout(exerciseIds, name);
   toast('Workout started');
   go('log');
 }
@@ -161,10 +160,7 @@ async function repeatWorkout(exerciseIds: number[], name?: string): Promise<void
 async function deleteWorkout(id: number): Promise<void> {
   if (!(await confirmDialog('Delete this workout and all its sets? This cannot be undone.', { confirmLabel: 'Delete', danger: true })))
     return;
-  await db.transaction('rw', db.workouts, db.sets, async () => {
-    await db.sets.where('workoutId').equals(id).delete();
-    await db.workouts.delete(id);
-  });
+  await removeWorkout(id);
   toast('Workout deleted');
   go('history');
 }

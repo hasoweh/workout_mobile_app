@@ -148,6 +148,16 @@ export function startOfDay(ms: number): number {
   return d.getTime();
 }
 
+/** Sum of weight × reps, in kg. */
+export function setsVolume(sets: WorkoutSet[]): number {
+  return sets.reduce((v, s) => v + (s.weight ?? 0) * (s.reps ?? 0), 0);
+}
+
+/** Total distance, in km. */
+export function setsDistance(sets: WorkoutSet[]): number {
+  return sets.reduce((d, s) => d + (s.distance ?? 0), 0);
+}
+
 export function sortSets(sets: WorkoutSet[]): WorkoutSet[] {
   return [...sets].sort((a, b) => a.order - b.order || a.createdAt - b.createdAt);
 }

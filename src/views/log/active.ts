@@ -1,13 +1,15 @@
+import { startRest, stopRest } from '../../components/rest-timer';
 import { workoutNameInput } from '../../components/workout-name';
 import { pickExercise } from '../../components/exercise-picker';
 import { db, type Exercise, type Workout, type WorkoutSet } from '../../db';
 import { lastSessionSets, sortSets } from '../../lib/analytics';
 import { h } from '../../lib/dom';
-import { formatDate, formatDuration, formatTime, fromDisplayWeight, parseDuration, toDisplayWeight } from '../../lib/format';
+import { fmtNum, formatDate, formatDuration, formatTime, fromDisplayWeight, parseDuration, toDisplayWeight } from '../../lib/format';
 import type { Settings } from '../../lib/settings';
-import { confirmDialog, openSheet, toast } from '../../lib/ui';
+import { confirmDialog, openSheet, safe, toast } from '../../lib/ui';
+import { deleteWorkout, workoutExerciseIds } from '../../lib/workouts';
 import { editSetSheet, showSummary } from './sheets';
-import { deleteWorkout, describeLastSession, describeSet, fmtNum, parseNum, safe, workoutExerciseIds } from './util';
+import { describeLastSession, describeSet, parseNum } from './util';
 
 export interface RenderOpts { scrollToExercise?: number }
 export type Rerender = (opts?: RenderOpts) => Promise<void>;
@@ -168,6 +170,7 @@ function strengthEntry(ctx: Ctx, exerciseId: number, ex: Exercise | undefined, s
     btn.disabled = true;
     try {
       await addSet(ctx, exerciseId, { weight: fromDisplayWeight(w, units), reps: r });
+      startRest(ctx.settings.restSeconds);
     } finally {
       btn.disabled = false;
     }
@@ -290,6 +293,7 @@ function finishBar(ctx: Ctx, setCount: number, ids: number[]): HTMLElement {
   const discard = safe(async () => {
     if (!(await confirmDialog('Discard this workout and all its sets? This cannot be undone.', { confirmLabel: 'Discard', danger: true }))) return;
     await deleteWorkout(ctx.workout.id);
+    stopRest();
     toast('Workout discarded');
     await ctx.rerender();
   });
@@ -298,12 +302,14 @@ function finishBar(ctx: Ctx, setCount: number, ids: number[]): HTMLElement {
     if (setCount === 0) {
       if (await confirmDialog('No sets logged yet. Discard this workout?', { confirmLabel: 'Discard', danger: true })) {
         await deleteWorkout(ctx.workout.id);
+        stopRest();
         await ctx.rerender();
       }
       return;
     }
     if (!(await confirmDialog('Finish this workout?', { confirmLabel: 'Finish' }))) return;
     await db.workouts.update(ctx.workout.id, { endedAt: Date.now() });
+    stopRest();
     for (const key of [...drafts.keys(), ...lastCache.keys()]) {
       if (key.startsWith(`${ctx.workout.id}:`)) { drafts.delete(key); lastCache.delete(key); }
     }
@@ -316,7 +322,7 @@ function finishBar(ctx: Ctx, setCount: number, ids: number[]): HTMLElement {
   return h('div', { class: 'log-finish-bar' },
     h('div', { class: 'log-finish-inner' },
       h('button', { type: 'button', class: 'btn-secondary log-discard', onclick: discard }, 'Discard'),
-      h('button', { type: 'button', class: 'grow btn-lg', onclick: finish }, 'Finish workout'),
+      h('button', { type: 'button', class: 'btn-go grow btn-lg', onclick: finish }, 'Finish workout'),
     ),
   );
 }

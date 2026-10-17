@@ -1,3 +1,4 @@
+import type { Exercise, WorkoutSet } from '../db';
 import type { Units } from './settings';
 
 const KG_PER_LB = 0.45359237;
@@ -53,4 +54,41 @@ export function formatDate(ms: number): string {
 
 export function formatTime(ms: number): string {
   return timeFmt.format(new Date(ms));
+}
+
+/** Number → short string without float noise ("82.5", "81.25", "80"). */
+export function fmtNum(n: number, digits = 2): string {
+  return String(Math.round(n * 10 ** digits) / 10 ** digits);
+}
+
+/** Volume (kg) in display units, rounded to a whole number: "12,340 kg". */
+export function formatVolume(kg: number, units: Units): string {
+  return `${Math.round(toDisplayWeight(kg, units)).toLocaleString()} ${units}`;
+}
+
+/** "5.0 km", "5.25 km". */
+export function formatDistance(km: number): string {
+  const r = Math.round(km * 100) / 100;
+  return `${Number.isInteger(r * 10) ? r.toFixed(1) : String(r)} km`;
+}
+
+/** True if the exercise is cardio, or (if unknown) the sets look like cardio. */
+export function isCardio(exercise: Exercise | undefined, sets: WorkoutSet[]): boolean {
+  if (exercise) return exercise.type === 'cardio';
+  return sets.some((s) => s.distance !== undefined || s.duration !== undefined);
+}
+
+/** One set as text: "80 kg × 8", "12 reps" or "5.0 km · 25:00 · 5:00 /km". */
+export function formatSet(s: WorkoutSet, cardio: boolean, units: Units): string {
+  if (cardio) {
+    const parts: string[] = [];
+    if (s.distance) parts.push(formatDistance(s.distance));
+    if (s.duration) parts.push(formatDuration(s.duration));
+    if (s.distance && s.duration) parts.push(formatPace(s.duration / s.distance));
+    return parts.join(' · ') || '—';
+  }
+  const w = s.weight ? `${fmtNum(toDisplayWeight(s.weight, units))} ${units}` : '';
+  const r = s.reps ?? 0;
+  if (w) return `${w} × ${r}`;
+  return `${r} rep${r === 1 ? '' : 's'}`;
 }

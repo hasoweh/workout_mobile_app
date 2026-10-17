@@ -2,9 +2,9 @@ import { Chart } from 'chart.js';
 import { db, MUSCLES, type Exercise, type Muscle, type Workout, type WorkoutSet } from '../../db';
 import { groupBy, muscleShares, startOfDay, startOfWeek, summarizeSession, type ExerciseSession } from '../../lib/analytics';
 import { h } from '../../lib/dom';
-import { formatDate, formatDuration, toDisplayWeight } from '../../lib/format';
+import { fmtNum, formatDate, formatDuration, toDisplayWeight } from '../../lib/format';
 import { getSettings, type Units } from '../../lib/settings';
-import { fmtNum, muscleColor, shortDate, theme, track, type Theme } from './charts';
+import { muscleColor, shortDate, theme, track, type Theme } from './charts';
 
 const HEATMAP_WEEKS = 17;
 const BAR_WEEKS = 8;
@@ -268,7 +268,7 @@ function muscleSection(
       ...sorted.map((g) =>
         h('li', { class: 'spread' },
           h('span', { class: 'row' }, h('span', { class: 'progress-swatch', style: `background: ${muscleColor(g, t.dark)}` }), g),
-          h('span', {}, h('strong', {}, fmtNum(cur(g))), h('span', { class: 'muted' }, ` · ${fmtNum(last(g))}`)),
+          h('span', {}, h('strong', {}, fmtNum(cur(g), 1)), h('span', { class: 'muted' }, ` · ${fmtNum(last(g), 1)}`)),
         ),
       ),
     ),

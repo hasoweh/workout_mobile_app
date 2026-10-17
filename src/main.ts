@@ -2,6 +2,7 @@
 import './styles.css';
 import { registerSW } from 'virtual:pwa-register';
 import { requestPersistentStorage } from './db';
+import { mountRestTimer } from './components/rest-timer';
 import { startRouter } from './router';
 import { logView } from './views/log';
 import { historyView } from './views/history';
@@ -10,6 +11,7 @@ import { settingsView } from './views/settings';
 
 registerSW({ immediate: true });
 void requestPersistentStorage();
+mountRestTimer();
 
 startRouter(
   document.getElementById('app')!,

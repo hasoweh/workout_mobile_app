@@ -1,4 +1,5 @@
 import { db, MUSCLES, type Exercise, type ExerciseType, type Muscle } from '../db';
+import { workoutExerciseIds } from '../lib/workouts';
 import { muscleChips, musclesLabel } from './muscle-chips';
 import { h } from '../lib/dom';
 import { openSheet, toast } from '../lib/ui';
@@ -153,9 +154,7 @@ async function loadData(exclude: Set<number>): Promise<{ all: Exercise[]; recent
   const recent: Exercise[] = [];
   const seen = new Set<number>();
   for (const w of workouts) {
-    let ids = w.exerciseIds ?? [];
-    if (ids.length === 0) ids = [...new Set((await db.sets.where('workoutId').equals(w.id).sortBy('order')).map((s) => s.exerciseId))];
-    for (const id of ids) {
+    for (const id of await workoutExerciseIds(w)) {
       const ex = byId.get(id);
       if (ex && !seen.has(id)) { seen.add(id); recent.push(ex); }
       if (recent.length >= RECENT_LIMIT) return { all, recent };

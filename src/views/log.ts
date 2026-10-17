@@ -2,9 +2,9 @@ import { db, type Exercise, type Workout } from '../db';
 import { h } from '../lib/dom';
 import { formatDate, formatDuration, formatTime } from '../lib/format';
 import { getSettings, isBackupDue } from '../lib/settings';
-import { go, toast } from '../lib/ui';
+import { go, safe, toast } from '../lib/ui';
 import { buildActive, type RenderOpts } from './log/active';
-import { getActiveWorkout, safe, workoutExerciseIds } from './log/util';
+import { getActiveWorkout, startWorkout, workoutExerciseIds } from '../lib/workouts';
 import './log.css';
 
 const RECENT_WORKOUTS = 5;
@@ -58,7 +58,7 @@ async function buildIdle(rerender: (o?: RenderOpts) => Promise<void>): Promise<H
     if (!(await getActiveWorkout())) {
       const usable = ids.filter((id) => { const ex = byId.get(id); return ex && !ex.archived; });
       if (ids.length && usable.length < ids.length) toast('Skipped archived or deleted exercises');
-      await db.workouts.add({ startedAt: Date.now(), exerciseIds: usable, ...(name ? { name } : {}) });
+      await startWorkout(usable, name);
     }
     await rerender();
   });
@@ -69,7 +69,7 @@ async function buildIdle(rerender: (o?: RenderOpts) => Promise<void>): Promise<H
       ? h('a', { class: 'banner log-banner', href: '#/settings', onclick: (e: Event) => { e.preventDefault(); go('settings'); } },
           '💾 No backup in a while — tap to export')
       : null,
-    h('button', { type: 'button', class: 'btn-block log-start', onclick: start([]) }, 'Start workout'),
+    h('button', { type: 'button', class: 'btn-go btn-block log-start', onclick: start([]) }, 'Start workout'),
     recent.length
       ? h('button', { type: 'button', class: 'btn-secondary btn-block btn-lg', onclick: start(recentIds[0], recent[0].name) },
           '↻ Repeat last workout')

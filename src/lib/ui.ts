@@ -49,3 +49,13 @@ export function toast(message: string, ms = 2500): void {
 export function go(...parts: Array<string | number>): void {
   location.hash = '#/' + parts.join('/');
 }
+
+/** Wraps an async handler so failures surface as a toast instead of an unhandled rejection. */
+export function safe<A extends unknown[]>(fn: (...args: A) => Promise<unknown>): (...args: A) => void {
+  return (...args: A) => {
+    fn(...args).catch((err: unknown) => {
+      console.error(err);
+      toast('Something went wrong — please try again');
+    });
+  };
+}

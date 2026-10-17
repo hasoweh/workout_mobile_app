@@ -2,7 +2,7 @@
 
 .history-link {
   display: inline-flex; align-items: center; min-height: var(--tap);
-  color: var(--accent); text-decoration: none; font-weight: 600;
+  color: var(--link); text-decoration: none; font-weight: 600;
 }
 .history-back { margin-bottom: 4px; }
 
@@ -13,7 +13,7 @@
   border-color: var(--accent);
   background: color-mix(in srgb, var(--accent) 12%, var(--surface));
 }
-.history-resume-cta { color: var(--accent); font-weight: 600; white-space: nowrap; }
+.history-resume-cta { color: var(--link); font-weight: 600; white-space: nowrap; }
 
 .history-list { display: flex; flex-direction: column; gap: 10px; }
 .history-week {

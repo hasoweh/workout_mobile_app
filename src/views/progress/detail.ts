@@ -3,9 +3,9 @@ import { Chart } from 'chart.js';
 import { db, type Exercise, type WorkoutSet } from '../../db';
 import { computePRs, exerciseHistory, startOfDay, type ExerciseSession } from '../../lib/analytics';
 import { h } from '../../lib/dom';
-import { formatDate, formatDuration, formatPace, toDisplayWeight } from '../../lib/format';
+import { fmtNum, formatDate, formatDuration, formatPace, toDisplayWeight } from '../../lib/format';
 import { getSettings, type Units } from '../../lib/settings';
-import { fmtNum, shortDate, theme, track, untrack } from './charts';
+import { shortDate, theme, track, untrack } from './charts';
 
 type Kind = 'weighted' | 'reps' | 'cardio';
 type RangeKey = '1M' | '3M' | '6M' | '1Y' | 'All';
@@ -67,7 +67,7 @@ function kindOf(ex: Exercise, sessions: ExerciseSession[]): Kind {
 }
 
 function metricsFor(kind: Kind, units: Units): Metric[] {
-  const w = (v: number) => `${fmtNum(v)} ${units}`;
+  const w = (v: number) => `${fmtNum(v, 1)} ${units}`;
   const nz = (v: number) => (v > 0 ? v : null);
   switch (kind) {
     case 'weighted':

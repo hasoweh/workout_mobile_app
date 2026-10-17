@@ -7,7 +7,7 @@
 .progress-link-btn {
   display: inline-flex; align-items: center; justify-content: center; min-height: var(--tap);
   margin-top: 8px; padding: 0 20px; border-radius: 12px;
-  background: var(--accent); color: #000; font-weight: 600; text-decoration: none;
+  background: var(--blue); color: var(--on-blue); font-weight: 600; text-decoration: none;
 }
 
 /* ---- Stat tiles ---- */
@@ -43,7 +43,7 @@
 .progress-hm-legend { display: flex; align-items: center; gap: 3px; flex-shrink: 0; }
 .progress-hm-legend .progress-hm-cell { width: 11px; height: 11px; }
 .progress-hm-caption { min-height: 1.4em; }
-.progress-hm-caption a { margin-left: 6px; color: var(--accent); }
+.progress-hm-caption a { margin-left: 6px; color: var(--link); }
 
 /* ---- Charts ---- */
 .progress-chart { position: relative; height: 220px; width: 100%; }
@@ -67,7 +67,7 @@
 /* ---- Detail ---- */
 .progress-back {
   display: inline-flex; align-items: center; min-height: var(--tap); margin-left: -4px; padding: 0 4px;
-  color: var(--accent); text-decoration: none; font-weight: 500;
+  color: var(--link); text-decoration: none; font-weight: 500;
 }
 .progress-title { margin: 0; }
 .progress-subtitle { margin: 4px 0 16px; }
@@ -78,7 +78,7 @@
 
 .progress-session { border-top: 1px solid var(--border); padding-top: 12px; }
 .progress-session p { margin: 0; }
-.progress-session a { color: var(--accent); }
+.progress-session a { color: var(--link); }
 .progress-set-list { margin: 8px 0 0; padding-left: 24px; }
 .progress-set-list li { padding: 2px 0; font-variant-numeric: tabular-nums; }
 
@@ -94,4 +94,4 @@
 .progress-recent td:nth-child(2) { word-break: break-word; }
 .progress-recent td:last-child { text-align: right; white-space: nowrap; }
 .progress-recent th:last-child { text-align: right; }
-.progress-table a { color: var(--accent); }
+.progress-table a { color: var(--link); }

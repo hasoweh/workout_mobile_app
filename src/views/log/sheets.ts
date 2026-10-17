@@ -1,10 +1,10 @@
 import { db, type Exercise, type WorkoutSet } from '../../db';
-import { newPRsInWorkout, sortSets } from '../../lib/analytics';
+import { newPRsInWorkout, setsVolume, sortSets } from '../../lib/analytics';
 import { h } from '../../lib/dom';
-import { formatDate, formatDuration, formatTime, fromDisplayWeight, parseDuration, toDisplayWeight } from '../../lib/format';
+import { fmtNum, formatDate, formatDuration, formatTime, formatVolume, fromDisplayWeight, parseDuration, toDisplayWeight } from '../../lib/format';
 import type { Settings } from '../../lib/settings';
-import { confirmDialog, openSheet, toast } from '../../lib/ui';
-import { fmtNum, parseNum, safe } from './util';
+import { confirmDialog, openSheet, safe, toast } from '../../lib/ui';
+import { parseNum } from './util';
 
 /** Edit or delete one logged set. Resolves true if anything changed. */
 export function editSetSheet(set: WorkoutSet, ex: Exercise | undefined, index: number, settings: Settings): Promise<boolean> {
@@ -89,7 +89,7 @@ export async function showSummary(workoutId: number, settings: Settings, names: 
   const disp = (kg: number) => `${fmtNum(toDisplayWeight(kg, units))} ${units}`;
 
   const exerciseCount = new Set(sets.map((s) => s.exerciseId)).size;
-  const volumeKg = sets.reduce((sum, s) => sum + (s.weight ?? 0) * (s.reps ?? 0), 0);
+  const volumeKg = setsVolume(sets);
   const duration = ((workout.endedAt ?? Date.now()) - workout.startedAt) / 1000;
 
   const stat = (label: string, value: string) =>
@@ -117,7 +117,7 @@ export async function showSummary(workoutId: number, settings: Settings, names: 
           stat('Duration', formatDuration(duration)),
           stat('Exercises', String(exerciseCount)),
           stat('Sets', String(sets.length)),
-          stat('Volume', volumeKg > 0 ? `${Math.round(toDisplayWeight(volumeKg, units)).toLocaleString()} ${units}` : '—'),
+          stat('Volume', volumeKg > 0 ? formatVolume(volumeKg, units) : '—'),
         ),
         prs.length
           ? h('div', { class: 'log-prs' },

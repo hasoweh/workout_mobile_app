@@ -6,11 +6,13 @@ export interface Settings {
   units: Units;
   /** Weight +/- step, in the display unit. */
   weightStep: number;
+  /** Rest timer length after logging a strength set, in seconds; 0 turns it off. */
+  restSeconds: number;
   /** Epoch ms of the last successful export, or null if never. */
   lastBackupAt: number | null;
 }
 
-export const DEFAULT_SETTINGS: Settings = { units: 'kg', weightStep: 2.5, lastBackupAt: null };
+export const DEFAULT_SETTINGS: Settings = { units: 'kg', weightStep: 2.5, restSeconds: 90, lastBackupAt: null };
 
 /** Remind the user to back up when the last export is older than this. */
 export const BACKUP_REMINDER_DAYS = 14;

@@ -25,6 +25,6 @@
 .picker-row:active:not(:disabled) { transform: none; background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .picker-row-meta { color: var(--muted); font-size: 0.85rem; font-weight: 400; white-space: nowrap; }
 .picker-create {
-  border: 1px dashed var(--accent); border-radius: 14px; color: var(--accent); font-weight: 600;
+  border: 1px dashed var(--link); border-radius: 14px; color: var(--link); font-weight: 600;
 }
 .picker-form .chips { margin-top: 2px; }

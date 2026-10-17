@@ -59,7 +59,7 @@
   font-size: 1.4rem; font-weight: 700; font-variant-numeric: tabular-nums;
 }
 .log-num::placeholder { font-size: 1rem; font-weight: 400; color: var(--muted); }
-.log-submit { min-height: 60px; font-size: 1.15rem; background: var(--blue); color: var(--on-blue); }
+.log-submit { min-height: 60px; font-size: 1.15rem; }
 
 /* Fixed finish bar above the tab bar (60px + safe area) */
 .log-finish-bar {

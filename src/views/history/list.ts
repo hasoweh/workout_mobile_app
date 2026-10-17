@@ -4,7 +4,10 @@ import { h } from '../../lib/dom';
 import { go } from '../../lib/ui';
 import { formatDate, formatTime } from '../../lib/format';
 import { getSettings, type Units } from '../../lib/settings';
-import { formatDistance, formatVolume, safe, setsDistance, setsVolume, workoutDuration } from './shared';
+import { setsDistance, setsVolume } from '../../lib/analytics';
+import { formatDistance, formatVolume } from '../../lib/format';
+import { safe } from '../../lib/ui';
+import { workoutDuration } from './shared';
 
 const PAGE_SIZE = 30;
 const weekFmt = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' });

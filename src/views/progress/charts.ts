@@ -98,8 +98,3 @@ export function shortDate(ms: number): string {
   const d = new Date(ms);
   return d.getFullYear() === new Date().getFullYear() ? shortDateFmt.format(d) : shortDateYearFmt.format(d);
 }
-
-/** Number with up to `digits` decimals, trailing zeros trimmed. */
-export function fmtNum(v: number, digits = 1): string {
-  return String(Math.round(v * 10 ** digits) / 10 ** digits);
-}

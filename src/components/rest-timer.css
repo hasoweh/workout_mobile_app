@@ -1,0 +1,33 @@
+.rest-timer {
+  position: fixed; left: 0; right: 0; z-index: 20;
+  bottom: calc(60px + env(safe-area-inset-bottom));
+  overflow: hidden; background: var(--surface); border-top: 1px solid var(--border);
+}
+.rest-timer[hidden] { display: none; }
+/* Sit above the Log tab's fixed finish bar when it's showing. */
+body:has(.log-finish-bar) .rest-timer { bottom: calc(133px + env(safe-area-inset-bottom)); }
+
+.rest-fill {
+  position: absolute; inset: 0 auto 0 0; width: 0;
+  background: color-mix(in srgb, var(--blue) 35%, transparent);
+  transition: width 0.25s linear;
+}
+.rest-done .rest-fill { background: color-mix(in srgb, var(--accent) 35%, transparent); }
+
+.rest-inner {
+  position: relative; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  max-width: 640px; margin: 0 auto; padding: 6px 16px; min-height: 56px;
+}
+.rest-text { display: flex; align-items: baseline; gap: 8px; }
+.rest-label { color: var(--muted); font-weight: 600; }
+.rest-time { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.rest-done .rest-time { font-size: 1rem; }
+.rest-controls { display: flex; gap: 6px; }
+.rest-controls[hidden] { display: none; }
+.rest-btn { min-height: 44px; padding: 0 12px; }
+
+/* Keep page content and toasts clear of the bar while it's visible. */
+body:has(.rest-timer:not([hidden])) #app { padding-bottom: calc(140px + env(safe-area-inset-bottom)); }
+body:has(.rest-timer:not([hidden])) .log-active { padding-bottom: 140px; }
+body:has(.rest-timer:not([hidden])) .toast { bottom: calc(150px + env(safe-area-inset-bottom)); }
+body:has(.rest-timer:not([hidden])):has(.log-finish-bar) .toast { bottom: calc(205px + env(safe-area-inset-bottom)); }
