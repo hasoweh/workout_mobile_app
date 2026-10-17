@@ -1,0 +1,83 @@
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --text: #15171c;
+  --muted: #6b7280;
+  --accent: #16a34a;
+  --border: #e5e7eb;
+  --tap: 48px;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111318;
+    --surface: #1b1e25;
+    --text: #e8eaed;
+    --muted: #9aa0a6;
+    --accent: #4ade80;
+    --border: #2a2e37;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.4 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#app {
+  padding: 16px 16px calc(80px + env(safe-area-inset-bottom));
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+h1 { font-size: 1.5rem; margin: 8px 0 16px; }
+.muted { color: var(--muted); }
+
+button {
+  min-height: var(--tap);
+  padding: 0 16px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--accent);
+  color: #000;
+  font: inherit;
+  font-weight: 600;
+}
+
+input, select {
+  min-height: var(--tap);
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+.tabbar {
+  position: fixed;
+  inset: auto 0 0 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+}
+
+.tabbar a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 60px;
+  color: var(--muted);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.tabbar a.active { color: var(--accent); }
