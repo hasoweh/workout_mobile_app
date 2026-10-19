@@ -46,6 +46,9 @@
 
 /* Entry row */
 .log-entry { display: flex; flex-direction: column; gap: 10px; }
+.log-entry-slot { display: flex; flex-direction: column; gap: 4px; }
+.log-add-set { min-height: 52px; border-style: dashed; color: var(--link); font-weight: 600; }
+.log-add-set-plus { font-size: 1.4rem; line-height: 1; vertical-align: -2px; }
 .log-entry-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .log-field { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .log-field-label { font-size: 0.75rem; color: var(--muted); text-align: center; text-transform: uppercase; letter-spacing: 0.04em; }

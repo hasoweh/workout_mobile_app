@@ -17,6 +17,9 @@ export type Rerender = (opts?: RenderOpts) => Promise<void>;
 /** Unsent entry-row values per workout/exercise, so re-renders don't lose what was typed. */
 interface Draft { a: string; b: string }
 const drafts = new Map<string, Draft>();
+/** Exercises whose "add set" entry row is expanded, keyed by workout/exercise. Collapsed by default. */
+const openEntries = new Set<string>();
+const entryKey = (ctx: Ctx, exerciseId: number) => `${ctx.workout.id}:${exerciseId}`;
 /** Previous-session sets don't change during a workout; cache them per workout/exercise. */
 const lastCache = new Map<string, WorkoutSet[]>();
 
@@ -114,8 +117,29 @@ function exerciseCard(ctx: Ctx, exerciseId: number, sets: WorkoutSet[], last: Wo
       }, '⋯'),
     ),
     setList,
-    ex?.type === 'cardio' ? cardioEntry(ctx, exerciseId, sets, last) : strengthEntry(ctx, exerciseId, ex, sets, last),
+    entrySlot(ctx, exerciseId, ex, sets, last),
   );
+}
+
+/** "+ Add set" button that expands into the entry row (and collapses again on Cancel or after logging). */
+function entrySlot(ctx: Ctx, exerciseId: number, ex: Exercise | undefined, sets: WorkoutSet[], last: WorkoutSet[]): HTMLElement {
+  const key = entryKey(ctx, exerciseId);
+  const slot = h('div', { class: 'log-entry-slot' });
+  const paint = () => {
+    if (openEntries.has(key)) {
+      slot.replaceChildren(
+        ex?.type === 'cardio' ? cardioEntry(ctx, exerciseId, sets, last) : strengthEntry(ctx, exerciseId, ex, sets, last),
+        h('button', { type: 'button', class: 'btn-ghost btn-block', onclick: () => { openEntries.delete(key); paint(); } }, 'Cancel'),
+      );
+    } else {
+      slot.replaceChildren(h('button', {
+        type: 'button', class: 'btn-secondary btn-block log-add-set',
+        onclick: () => { openEntries.add(key); paint(); },
+      }, h('span', { class: 'log-add-set-plus', 'aria-hidden': 'true' }, '+'), sets.length ? ` Set ${sets.length + 1}` : ' Add set'));
+    }
+  };
+  paint();
+  return slot;
 }
 
 function draftFor(ctx: Ctx, exerciseId: number, init: () => Draft): Draft {
@@ -170,6 +194,7 @@ function strengthEntry(ctx: Ctx, exerciseId: number, ex: Exercise | undefined, s
     btn.disabled = true;
     try {
       await addSet(ctx, exerciseId, { weight: fromDisplayWeight(w, units), reps: r });
+      openEntries.delete(entryKey(ctx, exerciseId));
       startRest(ctx.settings.restSeconds);
     } finally {
       btn.disabled = false;
@@ -212,6 +237,7 @@ function cardioEntry(ctx: Ctx, exerciseId: number, sets: WorkoutSet[], last: Wor
     btn.disabled = true;
     try {
       await addSet(ctx, exerciseId, { distance: distance || undefined, duration: duration || undefined });
+      openEntries.delete(entryKey(ctx, exerciseId));
     } finally {
       btn.disabled = false;
     }
@@ -249,6 +275,8 @@ async function addExercise(ctx: Ctx, ids: number[]): Promise<void> {
       const w = await db.workouts.get(ctx.workout.id);
       if (w && !w.exerciseIds.includes(ex.id)) await db.workouts.update(w.id, { exerciseIds: [...w.exerciseIds, ex.id] });
     });
+    // A just-added exercise has nothing logged yet: open its entry row straight away.
+    openEntries.add(entryKey(ctx, ex.id));
   } else {
     toast('Already in this workout');
   }
@@ -310,8 +338,8 @@ function finishBar(ctx: Ctx, setCount: number, ids: number[]): HTMLElement {
     if (!(await confirmDialog('Finish this workout?', { confirmLabel: 'Finish' }))) return;
     await db.workouts.update(ctx.workout.id, { endedAt: Date.now() });
     stopRest();
-    for (const key of [...drafts.keys(), ...lastCache.keys()]) {
-      if (key.startsWith(`${ctx.workout.id}:`)) { drafts.delete(key); lastCache.delete(key); }
+    for (const key of [...drafts.keys(), ...lastCache.keys(), ...openEntries]) {
+      if (key.startsWith(`${ctx.workout.id}:`)) { drafts.delete(key); lastCache.delete(key); openEntries.delete(key); }
     }
     const names = new Map(ids.map((id) => [id, ctx.exercises.get(id)?.name ?? 'Unknown exercise']));
     // Show idle state behind the summary sheet.
