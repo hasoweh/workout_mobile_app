@@ -45,7 +45,7 @@ export function toast(message: string, ms = 2500): void {
   setTimeout(() => el.remove(), ms);
 }
 
-/** Navigate to a route, e.g. go('history', 12) → #/history/12. */
+/** Navigate to a route, e.g. go('log', 12) → #/log/12. */
 export function go(...parts: Array<string | number>): void {
   location.hash = '#/' + parts.join('/');
 }

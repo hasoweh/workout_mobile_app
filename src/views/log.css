@@ -4,13 +4,6 @@
 .log-banner { display: block; color: var(--text); text-decoration: none; font-weight: 500; }
 .log-start { min-height: 72px; font-size: 1.25rem; border-radius: 16px; }
 .log-section-title { margin: 8px 0 0; font-size: 1rem; color: var(--muted); font-weight: 600; }
-/* .list zeroes the card padding; restore it (less on the right, where the Repeat button has its own). */
-.log-recent-list { padding: 4px 8px 4px 16px; }
-.log-recent-row { display: flex; align-items: center; gap: 8px; }
-.log-recent-info { min-width: 0; }
-.log-recent-info .small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.log-recent-date { font-weight: 600; }
-.log-repeat { flex-shrink: 0; }
 
 /* Active workout; extra bottom room for the fixed finish bar */
 .log-active { display: flex; flex-direction: column; gap: 12px; padding-bottom: 76px; }
@@ -22,6 +15,7 @@
 }
 .log-empty { padding: 32px 16px; }
 .log-add { border-style: dashed; }
+.log-past { align-self: center; }
 
 .log-card { display: flex; flex-direction: column; gap: 12px; }
 .log-card-head { align-items: flex-start; }

@@ -45,7 +45,7 @@ function notFound(root: HTMLElement, message = 'Workout not found'): void {
   root.replaceChildren(
     h('div', { class: 'empty stack' },
       h('p', {}, message),
-      h('a', { class: 'history-link', href: '#/history' }, '← Back to history'),
+      h('a', { class: 'history-link', href: '#/log' }, '← Back'),
     ),
   );
 }
@@ -60,17 +60,18 @@ export async function renderDetail(root: HTMLElement, idParam: string): Promise<
       h('div', { class: 'empty stack' },
         h('p', {}, 'This workout is still in progress.'),
         h('button', { class: 'btn-lg', onclick: () => go('log') }, 'Resume workout'),
-        h('a', { class: 'history-link', href: '#/history' }, '← Back to history'),
       ),
     );
     return;
   }
+  // Back to the start screen's list, or to the standalone list when a workout is in progress (the start screen isn't shown then).
+  const back = (await getActiveWorkout()) ? 'log/history' : 'log';
   // Re-render in place after edits (keeps scroll position, unlike a route refresh).
   const reload = () => renderDetail(root, idParam);
-  root.replaceChildren(...buildDetail(data, reload));
+  root.replaceChildren(...buildDetail(data, back, reload));
 }
 
-function buildDetail(data: DetailData, reload: () => Promise<void>): Node[] {
+function buildDetail(data: DetailData, back: string, reload: () => Promise<void>): Node[] {
   const { workout, sets, sections, settings } = data;
   const endedAt = workout.endedAt!;
   const volume = setsVolume(sets);
@@ -130,11 +131,11 @@ function buildDetail(data: DetailData, reload: () => Promise<void>): Node[] {
   const actions = h('div', { class: 'stack history-actions' },
     h('button', { class: 'btn-lg btn-block', onclick: safe(() => repeatWorkout(sections.map((s) => s.exerciseId), workout.name)) },
       'Repeat this workout'),
-    h('button', { class: 'btn-danger btn-block', onclick: safe(() => deleteWorkout(workout.id)) }, 'Delete workout'),
+    h('button', { class: 'btn-danger btn-block', onclick: safe(() => deleteWorkout(workout.id, back)) }, 'Delete workout'),
   );
 
   return [
-    h('a', { class: 'history-link history-back', href: '#/history' }, '← History'),
+    h('a', { class: 'history-link history-back', href: `#/${back}` }, '← History'),
     h('div', { class: 'stack' },
       header,
       notesCard,
@@ -157,12 +158,12 @@ async function repeatWorkout(exerciseIds: number[], name?: string): Promise<void
   go('log');
 }
 
-async function deleteWorkout(id: number): Promise<void> {
+async function deleteWorkout(id: number, back: string): Promise<void> {
   if (!(await confirmDialog('Delete this workout and all its sets? This cannot be undone.', { confirmLabel: 'Delete', danger: true })))
     return;
   await removeWorkout(id);
   toast('Workout deleted');
-  go('history');
+  go(back);
 }
 
 function editTimeSheet(workout: Workout, reload: () => Promise<void>): void {

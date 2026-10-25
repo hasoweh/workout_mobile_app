@@ -1,4 +1,4 @@
-/* History tab: list (#/history) and workout detail (#/history/<id>). */
+/* Workout history, shown in the Log tab: list (#/log, #/log/history) and workout detail (#/log/<id>). */
 
 .history-link {
   display: inline-flex; align-items: center; min-height: var(--tap);
@@ -7,14 +7,6 @@
 .history-back { margin-bottom: 4px; }
 
 /* ---- List ---- */
-.history-resume {
-  display: flex; justify-content: space-between; align-items: center; gap: 12px;
-  min-height: 64px; margin-bottom: 16px; color: inherit; text-decoration: none;
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
-}
-.history-resume-cta { color: var(--link); font-weight: 600; white-space: nowrap; }
-
 .history-list { display: flex; flex-direction: column; gap: 10px; }
 .history-week {
   margin: 14px 0 2px; font-size: 0.8rem; font-weight: 600;
@@ -22,12 +14,14 @@
 }
 .history-week:first-child { margin-top: 0; }
 
-.history-row {
-  display: flex; flex-direction: column; gap: 4px; min-height: 72px;
-  color: inherit; text-decoration: none;
+.history-row { display: flex; align-items: center; gap: 8px; padding: 0 8px 0 0; overflow: hidden; }
+.history-row-link {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; min-height: 72px;
+  padding: 16px 0 16px 16px; color: inherit; text-decoration: none;
 }
-.history-row:active { transform: scale(0.99); background: color-mix(in srgb, var(--text) 4%, var(--surface)); }
+.history-row-link:active { background: color-mix(in srgb, var(--text) 4%, var(--surface)); }
 .history-row-exercises { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-repeat { flex-shrink: 0; }
 .history-more { margin-top: 16px; }
 
 /* ---- Detail ---- */

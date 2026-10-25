@@ -1,7 +1,7 @@
-/** A view renders into `root`. `params` are the path segments after the route name (#/history/12 → ['12']). */
+/** A view renders into `root`. `params` are the path segments after the route name (#/log/12 → ['12']). */
 export type View = (root: HTMLElement, params: string[]) => void | Promise<void>;
 
-/** Minimal hash router: #/log, #/history/12, ... Hash routing works on any static host without rewrites. */
+/** Minimal hash router: #/log, #/log/12, ... Hash routing works on any static host without rewrites. */
 export function startRouter(root: HTMLElement, routes: Record<string, View>, fallback: string): void {
   let renderId = 0;
   const render = async () => {

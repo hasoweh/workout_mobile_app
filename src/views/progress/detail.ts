@@ -224,7 +224,7 @@ function showSession(box: HTMLElement, session: ExerciseSession, kind: Kind, uni
   box.replaceChildren(
     h('div', { class: 'spread' },
       h('strong', {}, formatDate(session.date)),
-      h('a', { class: 'small', href: `#/history/${session.workoutId}` }, 'Open workout ›'),
+      h('a', { class: 'small', href: `#/log/${session.workoutId}` }, 'Open workout ›'),
     ),
     h('ol', { class: 'progress-set-list' },
       ...session.sets.map((s) => h('li', {}, formatSet(s, kind, units), s.notes ? h('span', { class: 'muted small' }, ` — ${s.notes}`) : null)),
@@ -323,7 +323,7 @@ function recentCard(kind: Kind, sessions: ExerciseSession[], units: Units): HTML
       h('tbody', {},
         ...recent.map((s) =>
           h('tr', {},
-            h('td', {}, h('a', { href: `#/history/${s.workoutId}` }, shortDate(s.date))),
+            h('td', {}, h('a', { href: `#/log/${s.workoutId}` }, shortDate(s.date))),
             h('td', {}, setsSummary(s.sets, kind, units)),
             h('td', {}, ...best(s)),
           ),

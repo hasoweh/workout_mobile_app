@@ -65,6 +65,7 @@ export async function buildActive(workout: Workout, settings: Settings, rerender
       type: 'button', class: 'btn-secondary btn-block btn-lg log-add',
       onclick: safe(() => addExercise(ctx, ids)),
     }, '+ Add exercise'),
+    h('a', { class: 'history-link log-past', href: '#/log/history' }, 'View past workouts ›'),
     finishBar(ctx, sets.length, ids),
   );
 }

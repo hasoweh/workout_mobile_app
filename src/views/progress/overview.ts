@@ -123,7 +123,7 @@ function heatmap(workouts: Workout[], sets: WorkoutSet[]): HTMLElement {
     const n = entry.workouts.length;
     caption.replaceChildren(
       `${formatDate(day)}: ${n} workout${n === 1 ? '' : 's'}, ${entry.sets} set${entry.sets === 1 ? '' : 's'} `,
-      ...entry.workouts.map((w, i) => h('a', { href: `#/history/${w.id}` }, n === 1 ? 'View' : `View #${i + 1}`)),
+      ...entry.workouts.map((w, i) => h('a', { href: `#/log/${w.id}` }, n === 1 ? 'View' : `View #${i + 1}`)),
     );
   };
 

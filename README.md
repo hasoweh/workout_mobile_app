@@ -20,10 +20,10 @@ npm run icons      # regenerate PNG icons from public/icon.svg
 src/
   main.ts          entry: registers service worker, requests persistent storage, starts router
   db.ts            Dexie schema + types (exercises, workouts, sets), default exercise seed
-  router.ts        hash router (#/log, #/history, ...)
+  router.ts        hash router (#/log, #/log/12, ...)
   lib/             shared logic: settings, units/formatting, analytics (e1RM, PRs), backup (JSON/CSV), DOM + UI helpers
   components/      exercise picker
-  views/           one module per tab (log, history, progress, settings), with subfolders for larger tabs
+  views/           one module per tab (log, program, progress, settings; history/ holds the past-workout list and detail used by log), with subfolders for larger tabs
   styles.css       theme tokens (auto dark mode), large tap targets
 public/            icons (generated from icon.svg)
 ```

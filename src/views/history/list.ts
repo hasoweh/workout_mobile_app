@@ -1,17 +1,18 @@
 import { db, type Workout, type WorkoutSet } from '../../db';
-import { startOfWeek, groupBy } from '../../lib/analytics';
+import { groupBy, setsDistance, setsVolume, startOfWeek } from '../../lib/analytics';
 import { h } from '../../lib/dom';
-import { go } from '../../lib/ui';
-import { formatDate, formatTime } from '../../lib/format';
+import { formatDate, formatDistance, formatTime, formatVolume } from '../../lib/format';
 import { getSettings, type Units } from '../../lib/settings';
-import { setsDistance, setsVolume } from '../../lib/analytics';
-import { formatDistance, formatVolume } from '../../lib/format';
 import { safe } from '../../lib/ui';
+import { workoutExerciseIds } from '../../lib/workouts';
 import { workoutDuration } from './shared';
 
 const PAGE_SIZE = 30;
 const weekFmt = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' });
 const weekYearFmt = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+
+/** Called with a finished workout and its exercise order when its row's Repeat button is tapped. */
+export type OnRepeat = (w: Workout, exerciseIds: number[]) => void;
 
 function weekLabel(weekStart: number): string {
   const thisWeek = startOfWeek(Date.now());
@@ -28,42 +29,21 @@ function exerciseSummary(names: string[]): string {
   return `${names.slice(0, 2).join(', ')} +${names.length - 2} more`;
 }
 
-export async function renderList(root: HTMLElement): Promise<void> {
+/**
+ * Finished workouts, newest first, grouped by week and paged. Rows open the workout (#/log/<id>);
+ * with `onRepeat` each row also gets a Repeat button. Null when there are no finished workouts.
+ */
+export async function buildHistoryList(onRepeat?: OnRepeat): Promise<HTMLElement | null> {
   const [settings, all, exercises] = await Promise.all([
     getSettings(),
     db.workouts.orderBy('startedAt').reverse().toArray(),
     db.exercises.toArray(),
   ]);
   const names = new Map(exercises.map((e) => [e.id, e.name]));
-  const inProgress = all.find((w) => w.endedAt === undefined);
   const finished = all.filter((w) => w.endedAt !== undefined);
-
-  root.append(h('h1', {}, 'History'));
-
-  if (inProgress) {
-    root.append(
-      h('a', { class: 'card history-resume', href: '#/log' },
-        h('div', {},
-          h('strong', {}, 'Workout in progress'),
-          h('div', { class: 'muted small' }, `Started ${formatTime(inProgress.startedAt)}`),
-        ),
-        h('span', { class: 'history-resume-cta' }, 'Resume →'),
-      ),
-    );
-  }
-
-  if (finished.length === 0) {
-    root.append(
-      h('div', { class: 'empty stack' },
-        h('p', {}, 'No workouts yet'),
-        h('button', { class: 'btn-lg', onclick: () => go('log') }, 'Start a workout'),
-      ),
-    );
-    return;
-  }
+  if (finished.length === 0) return null;
 
   const listEl = h('div', { class: 'history-list' });
-  root.append(listEl);
   const moreBtn = h('button', { class: 'btn-secondary btn-block history-more' }, 'Load more');
   let shown = 0;
   let lastWeek: number | null = null;
@@ -73,14 +53,18 @@ export async function renderList(root: HTMLElement): Promise<void> {
     shown += page.length;
     const sets = await db.sets.where('workoutId').anyOf(page.map((w) => w.id)).toArray();
     const byWorkout = groupBy(sets, (s) => s.workoutId);
-    for (const w of page) {
+    const rows = await Promise.all(page.map(async (w) => {
+      const wSets = byWorkout.get(w.id) ?? [];
+      return workoutRow(w, wSets, await workoutExerciseIds(w, wSets), names, settings.units, onRepeat);
+    }));
+    page.forEach((w, i) => {
       const week = startOfWeek(w.startedAt);
       if (week !== lastWeek) {
         listEl.append(h('h2', { class: 'history-week' }, weekLabel(week)));
         lastWeek = week;
       }
-      listEl.append(workoutRow(w, byWorkout.get(w.id) ?? [], names, settings.units));
-    }
+      listEl.append(rows[i]);
+    });
     if (shown >= finished.length) moreBtn.remove();
   };
 
@@ -89,14 +73,14 @@ export async function renderList(root: HTMLElement): Promise<void> {
     try { await loadPage(); } finally { moreBtn.disabled = false; }
   }));
   await loadPage();
-  if (shown < finished.length) root.append(moreBtn);
+  return h('div', {}, listEl, shown < finished.length ? moreBtn : null);
 }
 
-function workoutRow(w: Workout, sets: WorkoutSet[], names: Map<number, string>, units: Units): HTMLElement {
+function workoutRow(w: Workout, sets: WorkoutSet[], ids: number[], names: Map<number, string>, units: Units, onRepeat?: OnRepeat): HTMLElement {
   // Exercises in workout order, then any others that have sets; fall back to planned ones if nothing was logged.
   const withSets = new Set(sets.map((s) => s.exerciseId));
-  const ids = [...w.exerciseIds.filter((id) => withSets.has(id)), ...[...withSets].filter((id) => !w.exerciseIds.includes(id))];
-  const exNames = (ids.length ? ids : w.exerciseIds).map((id) => names.get(id) ?? 'Unknown exercise');
+  const logged = ids.filter((id) => withSets.has(id));
+  const exNames = (logged.length ? logged : ids).map((id) => names.get(id) ?? 'Unknown exercise');
   const volume = setsVolume(sets);
   const distance = setsDistance(sets);
 
@@ -104,13 +88,18 @@ function workoutRow(w: Workout, sets: WorkoutSet[], names: Map<number, string>, 
   if (volume > 0) stats.push(formatVolume(volume, units));
   if (distance > 0) stats.push(formatDistance(distance));
 
-  return h('a', { class: 'card history-row', href: `#/history/${w.id}` },
-    h('div', { class: 'spread' },
-      h('strong', {}, w.name ?? `${formatDate(w.startedAt)} · ${formatTime(w.startedAt)}`),
-      h('span', { class: 'muted small' }, workoutDuration(w.startedAt, w.endedAt!)),
+  return h('div', { class: 'card history-row' },
+    h('a', { class: 'history-row-link', href: `#/log/${w.id}` },
+      h('div', { class: 'spread' },
+        h('strong', {}, w.name ?? `${formatDate(w.startedAt)} · ${formatTime(w.startedAt)}`),
+        h('span', { class: 'muted small' }, workoutDuration(w.startedAt, w.endedAt!)),
+      ),
+      w.name ? h('div', { class: 'muted small' }, `${formatDate(w.startedAt)} · ${formatTime(w.startedAt)}`) : null,
+      h('div', { class: 'history-row-exercises' }, exerciseSummary(exNames)),
+      h('div', { class: 'muted small' }, stats.join(' · ')),
     ),
-    w.name ? h('div', { class: 'muted small' }, `${formatDate(w.startedAt)} · ${formatTime(w.startedAt)}`) : null,
-    h('div', { class: 'history-row-exercises' }, exerciseSummary(exNames)),
-    h('div', { class: 'muted small' }, stats.join(' · ')),
+    onRepeat
+      ? h('button', { type: 'button', class: 'btn-ghost history-repeat', disabled: ids.length === 0, onclick: () => onRepeat(w, ids) }, 'Repeat')
+      : null,
   );
 }
