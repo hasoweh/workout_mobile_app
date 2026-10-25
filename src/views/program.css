@@ -1,0 +1,42 @@
+/* Program tab. Shared components live in styles.css. */
+
+.program h1 { margin-bottom: 0; }
+.program h2 { font-size: 1.15rem; margin: 0; }
+.program-intro { margin: 0; }
+.program-banner { display: block; color: var(--text); text-decoration: none; font-weight: 500; }
+
+/* Picker */
+.program-pick p { margin: 0; }
+.program-pick-days { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+
+/* This week */
+.program-week { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.program-week-days { display: flex; gap: 6px; }
+.program-week-day {
+  min-width: 40px; height: 32px; padding: 0 8px; border-radius: 999px; display: grid; place-items: center;
+  border: 1px solid var(--border); font-weight: 600; font-size: 0.875rem; color: var(--muted);
+}
+.program-week-day.next { border-color: var(--accent); color: var(--text); }
+.program-week-day.done { background: color-mix(in srgb, var(--accent) 20%, transparent); border-color: transparent; color: var(--text); }
+
+/* Day cards */
+.program-day.next { border-color: var(--accent); }
+.program-day[open] > summary { margin-bottom: 8px; }
+.program-day-summary {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-height: 32px;
+  cursor: pointer; list-style: none;
+}
+.program-day-summary::-webkit-details-marker { display: none; }
+.program-day-summary::after { content: '▾'; color: var(--muted); }
+.program-day:not([open]) .program-day-summary::after { content: '▸'; }
+.program-day-title { font-weight: 700; font-size: 1.15rem; }
+.program-day-count { margin-left: auto; }
+.program-badge {
+  padding: 2px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;
+  background: var(--accent); color: #000;
+}
+.program-badge.done { background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--text); }
+.program-ex-list { margin-bottom: 12px; }
+.program-ex { align-items: baseline; }
+.program-ex-name { min-width: 0; }
+.program-ex-target { flex-shrink: 0; font-variant-numeric: tabular-nums; }

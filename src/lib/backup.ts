@@ -254,6 +254,9 @@ function parseWorkout(raw: unknown, i: number, ids: Set<number>, exerciseIds: Se
   if (notes !== undefined) w.notes = notes;
   const name = optString(raw, 'name', where)?.trim();
   if (name) w.name = name;
+  const programId = optString(raw, 'programId', where);
+  const programDay = optString(raw, 'programDay', where);
+  if (programId && programDay) Object.assign(w, { programId, programDay });
   return w;
 }
 
@@ -309,6 +312,10 @@ function parseSettings(raw: unknown): BackupSettings {
     if (!isFiniteNum(obj.restSeconds) || obj.restSeconds < 0) fail('Settings: "restSeconds" must be a non-negative number.');
     out.restSeconds = obj.restSeconds;
   }
+  if (obj.programId !== undefined) {
+    if (obj.programId !== null && typeof obj.programId !== 'string') fail('Settings: "programId" must be text or null.');
+    out.programId = obj.programId;
+  }
   return out;
 }
 
@@ -318,8 +325,9 @@ export function validateBackup(data: unknown): ValidationResult {
     if (!isObj(data)) fail('This is not a workout backup file.');
     if (data.app !== 'workout-tracker') fail('This file was not exported by this app.');
     const version = data.schemaVersion;
-    if (version !== 1 && version !== 2) {
-      fail(isFiniteNum(version) && version > 2
+    // Exports carry db.verno; any version up to ours parses (muscles/muscleGroup are both handled).
+    if (!isPosInt(version) || version > db.verno) {
+      fail(isFiniteNum(version) && version > db.verno
         ? `This backup is from a newer app version (schema ${version}). Update the app first.`
         : 'Unknown or missing backup schema version.');
     }

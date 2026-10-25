@@ -3,6 +3,7 @@ import { workoutNameInput } from '../../components/workout-name';
 import { pickExercise } from '../../components/exercise-picker';
 import { db, type Exercise, type Workout, type WorkoutSet } from '../../db';
 import { lastSessionSets, sortSets } from '../../lib/analytics';
+import { formatTarget, workoutTargets, type ProgramExercise } from '../../lib/programs';
 import { h } from '../../lib/dom';
 import { fmtNum, formatDate, formatDuration, formatTime, fromDisplayWeight, parseDuration, toDisplayWeight } from '../../lib/format';
 import type { Settings } from '../../lib/settings';
@@ -27,6 +28,8 @@ interface Ctx {
   workout: Workout;
   settings: Settings;
   exercises: Map<number, Exercise>;
+  /** Program targets by lowercase exercise name; empty for non-program workouts. */
+  targets: Map<string, ProgramExercise>;
   rerender: Rerender;
 }
 
@@ -38,7 +41,7 @@ export async function buildActive(workout: Workout, settings: Settings, rerender
   const sets = sortSets(rawSets);
   const exercises = new Map(allExercises.map((e) => [e.id, e]));
   const ids = await workoutExerciseIds(workout, sets);
-  const ctx: Ctx = { workout, settings, exercises, rerender };
+  const ctx: Ctx = { workout, settings, exercises, targets: workoutTargets(workout), rerender };
 
   const lasts = await Promise.all(ids.map(async (id) => {
     const key = `${workout.id}:${id}`;
@@ -93,6 +96,7 @@ function exerciseCard(ctx: Ctx, exerciseId: number, sets: WorkoutSet[], last: Wo
   const { settings } = ctx;
   const ex = ctx.exercises.get(exerciseId);
   const lastText = ex ? describeLastSession(last, ex, settings.units) : null;
+  const target = ex ? ctx.targets.get(ex.name.toLowerCase()) : undefined;
 
   const setList = sets.length
     ? h('ol', { class: 'log-sets' }, ...sets.map((s, i) => h('li', {},
@@ -110,6 +114,10 @@ function exerciseCard(ctx: Ctx, exerciseId: number, sets: WorkoutSet[], last: Wo
     h('div', { class: 'spread log-card-head' },
       h('div', { class: 'log-card-title' },
         h('h2', {}, ex?.name ?? 'Unknown exercise'),
+        target
+          ? h('div', { class: `small log-target${sets.length >= target.sets ? ' met' : ''}` },
+              `Target ${formatTarget(target)}${sets.length >= target.sets ? ' ✓' : ` · ${sets.length}/${target.sets} sets`}`)
+          : null,
         lastText ? h('div', { class: 'muted small' }, lastText) : h('div', { class: 'muted small' }, 'First time — no history yet')),
       h('button', {
         type: 'button', class: 'btn-icon', 'aria-label': 'Exercise options',

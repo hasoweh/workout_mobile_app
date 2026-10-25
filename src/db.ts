@@ -27,6 +27,9 @@ export interface Workout {
   /** Optional user-given name, e.g. "Push day". */
   name?: string;
   notes?: string;
+  /** Set when started from a program day (see lib/programs), e.g. 'full-body-3' / 'A'. */
+  programId?: string;
+  programDay?: string;
 }
 
 /** One logged set. Strength sets use reps/weight; cardio uses distance/duration. */
@@ -87,6 +90,11 @@ db.version(3)
     await addMissingDefaults(tx.table('exercises'));
   });
 
+// v4: new default exercises used by the built-in programs.
+db.version(4)
+  .stores({})
+  .upgrade((tx) => addMissingDefaults(tx.table('exercises')));
+
 db.on('populate', (tx) => addMissingDefaults(tx.table('exercises')));
 
 async function addMissingDefaults(table: Dexie.Table<Exercise, number>): Promise<void> {
@@ -96,6 +104,18 @@ async function addMissingDefaults(table: Dexie.Table<Exercise, number>): Promise
   await table.bulkAdd(
     missing.map(([name, muscles, type]) => ({ name, muscles, type, archived: false, createdAt: now }) as Exercise),
   );
+}
+
+/** Finds an exercise by name (ignoring case), re-adding it from the defaults if the user deleted it. */
+export async function ensureDefaultExercise(name: string): Promise<Exercise | undefined> {
+  const lower = name.toLowerCase();
+  const found = await db.exercises.filter((e) => e.name.toLowerCase() === lower).first();
+  if (found) return found;
+  const def = DEFAULT_EXERCISES.find(([n]) => n.toLowerCase() === lower);
+  if (!def) return undefined;
+  const ex = { name: def[0], muscles: def[1], type: def[2], archived: false, createdAt: Date.now() } as Exercise;
+  ex.id = await db.exercises.add(ex);
+  return ex;
 }
 
 function defaultMuscles(name: string): Muscle[] | undefined {
@@ -143,12 +163,14 @@ const DEFAULT_EXERCISES: Array<[string, Muscle[], ExerciseType]> = [
   ['Leg Extension', ['Legs'], 'strength'],
   ['Leg Curl', ['Legs'], 'strength'],
   ['Romanian Deadlift', ['Legs', 'Glutes', 'Lower Back'], 'strength'],
+  ['Dumbbell Romanian Deadlift', ['Legs', 'Glutes', 'Lower Back'], 'strength'],
   ['Calf Raise', ['Legs'], 'strength'],
   ['Hip Thrust', ['Glutes', 'Legs'], 'strength'],
   ['Glute Bridge', ['Glutes'], 'strength'],
   ['Hip Abduction (Machine)', ['Glutes'], 'strength'],
   ['Overhead Press', ['Shoulders', 'Triceps'], 'strength'],
   ['Dumbbell Shoulder Press', ['Shoulders', 'Triceps'], 'strength'],
+  ['Machine Shoulder Press', ['Shoulders', 'Triceps'], 'strength'],
   ['Lateral Raise', ['Shoulders'], 'strength'],
   ['Rear Delt Fly', ['Shoulders', 'Upper Back'], 'strength'],
   ['Face Pull', ['Shoulders', 'Upper Back'], 'strength'],
@@ -159,6 +181,7 @@ const DEFAULT_EXERCISES: Array<[string, Muscle[], ExerciseType]> = [
   ['Overhead Triceps Extension', ['Triceps'], 'strength'],
   ['Skull Crusher', ['Triceps'], 'strength'],
   ['Close-Grip Bench Press', ['Triceps', 'Chest'], 'strength'],
+  ['Triceps Press Machine', ['Triceps', 'Chest'], 'strength'],
   ['Wrist Curl', ['Forearms'], 'strength'],
   ["Farmer's Carry", ['Forearms', 'Upper Back', 'Core'], 'strength'],
   ['Plank', ['Core'], 'strength'],

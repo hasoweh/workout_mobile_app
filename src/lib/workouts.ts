@@ -6,9 +6,9 @@ export async function getActiveWorkout(): Promise<Workout | undefined> {
   return open.sort((a, b) => b.startedAt - a.startedAt)[0];
 }
 
-/** Starts a new workout now with the given exercises (and optional name). Returns its id. */
-export async function startWorkout(exerciseIds: number[], name?: string): Promise<number> {
-  return db.workouts.add({ startedAt: Date.now(), exerciseIds, ...(name ? { name } : {}) } as Workout);
+/** Starts a new workout now with the given exercises (and optional name/program fields). Returns its id. */
+export async function startWorkout(exerciseIds: number[], name?: string, extra: Partial<Workout> = {}): Promise<number> {
+  return db.workouts.add({ startedAt: Date.now(), exerciseIds, ...(name ? { name } : {}), ...extra } as Workout);
 }
 
 /** Exercise order for a workout; falls back to set order for workouts saved before exerciseIds existed. */
