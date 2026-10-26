@@ -2,37 +2,42 @@
 
 /* Idle */
 .log-banner { display: block; color: var(--text); text-decoration: none; font-weight: 500; }
-.log-start { min-height: 72px; font-size: 1.25rem; border-radius: 16px; }
-.log-section-title { margin: 8px 0 0; font-size: 1rem; color: var(--muted); font-weight: 600; }
+.log-start { min-height: 72px; font-size: 1.25rem; font-weight: 700; border-radius: var(--radius); }
+.log-section-title {
+  margin: 12px 0 0; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--muted);
+}
 
 /* Active workout; extra bottom room for the fixed finish bar */
 .log-active { display: flex; flex-direction: column; gap: 12px; padding-bottom: 76px; }
 .log-header { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 4px; }
 .log-header h1 { margin: 8px 0 2px; }
 .log-timer {
-  font-size: 1.75rem; font-weight: 700; font-variant-numeric: tabular-nums;
-  color: var(--accent); line-height: 1;
+  font-size: 1.75rem; font-weight: 800; font-variant-numeric: tabular-nums;
+  color: var(--blue); line-height: 1;
 }
 .log-empty { padding: 32px 16px; }
-.log-add { border-style: dashed; }
+/* "+ Add exercise": tinted primary, like Hevy/Strong */
+.log-add { background: color-mix(in srgb, var(--blue) 14%, transparent); color: var(--link); }
 .log-past { align-self: center; }
 
 .log-card { display: flex; flex-direction: column; gap: 12px; }
 .log-card-head { align-items: flex-start; }
 .log-card-title { min-width: 0; }
-.log-card-title h2 { margin: 0 0 2px; font-size: 1.15rem; }
+.log-card-title h2 { margin: 0 0 2px; font-size: 1.15rem; font-weight: 700; color: var(--link); }
 .log-target { color: var(--link); font-weight: 600; }
 .log-target.met { color: var(--accent); }
 
-/* Logged sets */
+/* Logged sets: green-tinted "completed" rows */
 .log-sets { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .log-set {
   display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 0 12px;
-  background: var(--bg); color: var(--text); border-radius: 10px; font-weight: 500; text-align: left;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface)); color: var(--text);
+  border-radius: 10px; font-weight: 600; text-align: left;
 }
 .log-set-num {
-  flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
-  background: color-mix(in srgb, var(--accent) 20%, transparent); font-size: 0.85rem; font-weight: 700;
+  flex-shrink: 0; width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center;
+  background: var(--accent); color: #fff; font-size: 0.85rem; font-weight: 800;
 }
 .log-set-val { font-variant-numeric: tabular-nums; }
 .log-set-notes {
@@ -43,22 +48,25 @@
 /* Entry row */
 .log-entry { display: flex; flex-direction: column; gap: 10px; }
 .log-entry-slot { display: flex; flex-direction: column; gap: 4px; }
-.log-add-set { min-height: 52px; border-style: dashed; color: var(--link); font-weight: 600; }
+.log-add-set { min-height: 48px; color: var(--text); font-weight: 600; }
 .log-add-set-plus { font-size: 1.4rem; line-height: 1; vertical-align: -2px; }
 .log-entry-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.log-field { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.log-field-label { font-size: 0.75rem; color: var(--muted); text-align: center; text-transform: uppercase; letter-spacing: 0.04em; }
+.log-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.log-field-label {
+  font-size: 0.7rem; font-weight: 700; color: var(--muted); text-align: center;
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
 .log-stepper { display: flex; align-items: stretch; gap: 4px; }
 .log-step {
   flex-shrink: 0; width: 44px; min-height: 56px; padding: 0; font-size: 1.5rem; line-height: 1;
-  background: var(--bg); color: var(--text); border: 1px solid var(--border);
+  background: var(--surface-2); color: var(--text);
 }
 .log-num {
   min-width: 0; flex: 1; min-height: 56px; padding: 0 4px; text-align: center;
-  font-size: 1.4rem; font-weight: 700; font-variant-numeric: tabular-nums;
+  font-size: 1.5rem; font-weight: 800; font-variant-numeric: tabular-nums;
 }
 .log-num::placeholder { font-size: 1rem; font-weight: 400; color: var(--muted); }
-.log-submit { min-height: 60px; font-size: 1.15rem; }
+.log-submit { min-height: 56px; font-size: 1.1rem; font-weight: 700; }
 
 /* Fixed finish bar above the tab bar (60px + safe area) */
 .log-finish-bar {
@@ -67,21 +75,21 @@
   background: var(--bg); border-top: 1px solid var(--border);
 }
 .log-finish-inner { display: flex; gap: 8px; max-width: 640px; margin: 0 auto; padding: 8px 16px; }
-.log-discard { color: #dc2626; }
+.log-discard { color: var(--danger); }
 
 /* Sheets */
 .log-sheet-sub { margin: -8px 0 0; }
 .log-sheet-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.log-sheet-num { min-height: 56px; font-size: 1.3rem; font-weight: 700; text-align: center; }
+.log-sheet-num { min-height: 56px; font-size: 1.4rem; font-weight: 800; text-align: center; }
 
 /* Summary */
 .log-summary > p { margin: 0; }
 .log-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.log-stat { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px; text-align: center; }
-.log-stat-value { font-size: 1.4rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-.log-stat-label { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.log-stat { background: var(--surface); border-radius: var(--radius); padding: 14px 12px; text-align: center; box-shadow: var(--shadow); }
+.log-stat-value { font-size: 1.6rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.log-stat-label { color: var(--muted); font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
 .log-prs {
-  border-radius: 14px; padding: 12px 16px;
+  border-radius: var(--radius); padding: 12px 16px;
   background: color-mix(in srgb, #f59e0b 16%, var(--surface)); border: 1px solid color-mix(in srgb, #f59e0b 45%, transparent);
 }
 .log-prs h3 { margin: 0 0 4px; font-size: 1.05rem; }

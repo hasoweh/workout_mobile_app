@@ -5,14 +5,11 @@
 .settings-h2 { font-size: 1.15rem; margin: 0; }
 
 .settings-last-backup { margin: 0; }
-.settings-due { color: #dc2626; }
+.settings-due { color: var(--danger); }
 .settings-ok { color: var(--accent); font-weight: 600; }
 .settings-error {
   margin: 0; padding: 12px 16px; border-radius: 12px;
-  background: color-mix(in srgb, #dc2626 12%, var(--surface)); color: var(--text);
-}
-@media (prefers-color-scheme: dark) {
-  .settings-due { color: #f87171; }
+  background: color-mix(in srgb, var(--danger) 12%, var(--surface)); color: var(--text);
 }
 
 .settings-chip { min-height: var(--tap); min-width: 64px; }
@@ -20,8 +17,8 @@
 
 /* Exercise manager */
 .settings-ex-group {
-  margin: 16px 0 0; font-size: 0.8rem; font-weight: 600; text-transform: uppercase;
-  letter-spacing: 0.04em; color: var(--muted);
+  margin: 16px 0 0; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--muted);
 }
 .settings-ex-groups > :first-child .settings-ex-group { margin-top: 4px; }
 .settings-ex-groups .list > li { padding: 0; }

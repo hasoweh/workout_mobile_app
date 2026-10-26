@@ -13,9 +13,11 @@
 /* ---- Stat tiles ---- */
 .progress-tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 @media (min-width: 480px) { .progress-tiles { grid-template-columns: repeat(4, 1fr); } }
-.progress-tile { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 12px 14px; }
-.progress-tile-value { font-size: 1.6rem; font-weight: 700; line-height: 1.2; font-variant-numeric: tabular-nums; }
-.progress-tile-label { font-size: 0.8rem; color: var(--muted); }
+.progress-tile { background: var(--surface); border-radius: var(--radius); padding: 12px 14px; box-shadow: var(--shadow); }
+.progress-tile-value { font-size: 1.75rem; font-weight: 800; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.progress-tile-label {
+  font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted);
+}
 
 /* ---- Heatmap ---- */
 .progress-hm-grid {
@@ -83,8 +85,8 @@
 .progress-set-list li { padding: 2px 0; font-variant-numeric: tabular-nums; }
 
 .progress-pr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
-.progress-pr { border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; }
-.progress-pr-value { font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.progress-pr { background: var(--surface-2); border-radius: 12px; padding: 10px 12px; }
+.progress-pr-value { font-size: 1.4rem; font-weight: 800; font-variant-numeric: tabular-nums; }
 
 .progress-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .progress-table th { text-align: left; font-size: 0.8rem; font-weight: 500; color: var(--muted); padding: 4px 8px 4px 0; }

@@ -9,7 +9,7 @@ body:has(.log-finish-bar) .rest-timer { bottom: calc(133px + env(safe-area-inset
 
 .rest-fill {
   position: absolute; inset: 0 auto 0 0; width: 0;
-  background: color-mix(in srgb, var(--blue) 35%, transparent);
+  background: color-mix(in srgb, var(--blue) 22%, transparent);
   transition: width 0.25s linear;
 }
 .rest-done .rest-fill { background: color-mix(in srgb, var(--accent) 35%, transparent); }
@@ -20,7 +20,7 @@ body:has(.log-finish-bar) .rest-timer { bottom: calc(133px + env(safe-area-inset
 }
 .rest-text { display: flex; align-items: baseline; gap: 8px; }
 .rest-label { color: var(--muted); font-weight: 600; }
-.rest-time { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.rest-time { font-size: 1.5rem; font-weight: 800; font-variant-numeric: tabular-nums; }
 .rest-done .rest-time { font-size: 1rem; }
 .rest-controls { display: flex; gap: 6px; }
 .rest-controls[hidden] { display: none; }

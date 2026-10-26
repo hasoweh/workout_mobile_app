@@ -2,8 +2,8 @@
 .workout-name {
   min-height: 48px; padding: 0 8px; margin-left: -8px; width: calc(100% + 8px);
   border: 1px dashed transparent; background: transparent;
-  font-size: 1.5rem; font-weight: 700;
+  font-size: 1.85rem; font-weight: 800; letter-spacing: -0.02em;
 }
 .workout-name::placeholder { color: var(--muted); font-weight: 600; }
 .workout-name:hover { border-color: var(--border); }
-.workout-name:focus { outline: none; border-style: solid; border-color: var(--accent); background: var(--surface); }
+.workout-name:focus { outline: none; border-style: solid; border-color: var(--blue); background: var(--surface); }

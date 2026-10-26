@@ -9,8 +9,8 @@
 /* ---- List ---- */
 .history-list { display: flex; flex-direction: column; gap: 10px; }
 .history-week {
-  margin: 14px 0 2px; font-size: 0.8rem; font-weight: 600;
-  text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted);
+  margin: 14px 0 2px; font-size: 0.75rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted);
 }
 .history-week:first-child { margin-top: 0; }
 
@@ -41,8 +41,8 @@
 }
 .history-set:active:not(:disabled) { background: color-mix(in srgb, var(--text) 6%, transparent); transform: none; }
 .history-set-num {
-  flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%;
-  background: var(--bg); border: 1px solid var(--border); font-size: 0.8rem; color: var(--muted);
+  flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px;
+  background: var(--surface-2); font-size: 0.8rem; font-weight: 700; color: var(--muted);
 }
 .history-set-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .history-set-notes { font-weight: 400; overflow-wrap: anywhere; }

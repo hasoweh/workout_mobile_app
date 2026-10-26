@@ -14,10 +14,10 @@
 .program-week-days { display: flex; gap: 6px; }
 .program-week-day {
   min-width: 40px; height: 32px; padding: 0 8px; border-radius: 999px; display: grid; place-items: center;
-  border: 1px solid var(--border); font-weight: 600; font-size: 0.875rem; color: var(--muted);
+  border: 1px solid transparent; background: var(--surface-2); font-weight: 700; font-size: 0.875rem; color: var(--muted);
 }
 .program-week-day.next { border-color: var(--accent); color: var(--text); }
-.program-week-day.done { background: color-mix(in srgb, var(--accent) 20%, transparent); border-color: transparent; color: var(--text); }
+.program-week-day.done { background: var(--accent); border-color: transparent; color: #fff; }
 
 /* Day cards */
 .program-day.next { border-color: var(--accent); }
@@ -33,7 +33,7 @@
 .program-day-count { margin-left: auto; }
 .program-badge {
   padding: 2px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;
-  background: var(--accent); color: #000;
+  background: var(--accent); color: #fff;
 }
 .program-badge.done { background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--text); }
 .program-ex-list { margin-bottom: 12px; }
