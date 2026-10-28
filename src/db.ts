@@ -95,6 +95,11 @@ db.version(4)
   .stores({})
   .upgrade((tx) => addMissingDefaults(tx.table('exercises')));
 
+// v5: Machine Row for the full-body program.
+db.version(5)
+  .stores({})
+  .upgrade((tx) => addMissingDefaults(tx.table('exercises')));
+
 db.on('populate', (tx) => addMissingDefaults(tx.table('exercises')));
 
 async function addMissingDefaults(table: Dexie.Table<Exercise, number>): Promise<void> {
@@ -153,6 +158,7 @@ const DEFAULT_EXERCISES: Array<[string, Muscle[], ExerciseType]> = [
   ['Chin-up', ['Upper Back', 'Biceps'], 'strength'],
   ['Lat Pulldown', ['Upper Back', 'Biceps'], 'strength'],
   ['Seated Cable Row', ['Upper Back', 'Biceps'], 'strength'],
+  ['Machine Row', ['Upper Back', 'Biceps'], 'strength'],
   ['T-Bar Row', ['Upper Back', 'Biceps', 'Lower Back'], 'strength'],
   ['Shrug', ['Upper Back', 'Forearms'], 'strength'],
   ['Squat', ['Legs', 'Glutes', 'Lower Back'], 'strength'],

@@ -49,9 +49,9 @@ export const PROGRAMS: Program[] = [
       {
         key: 'B',
         exercises: [
-          ex('Dumbbell Romanian Deadlift', 3, '8–12'),
+          ex('Leg Press', 3, '8–12'),
           ex('Machine Shoulder Press', 3, '8–12'),
-          ex('Dumbbell Row', 3, '8–12', { note: 'each arm' }),
+          ex('Machine Row', 3, '8–12', { label: 'Chest-Supported Machine Row' }),
           ex('Leg Extension', 3, '10–15'),
           ex('Rear Delt Fly', 3, '12–15'),
           ex('Hammer Curl', 3, '10–15'),
