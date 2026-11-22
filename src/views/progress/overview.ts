@@ -5,6 +5,7 @@ import { h } from '../../lib/dom';
 import { fmtNum, formatDate, formatDuration, toDisplayWeight } from '../../lib/format';
 import { getSettings, type Units } from '../../lib/settings';
 import { muscleColor, shortDate, theme, track, type Theme } from './charts';
+import { fitTrend, hasData, kindOf, metricsFor, sessionPoints, type Metric, type Trend } from './metrics';
 
 const HEATMAP_WEEKS = 17;
 const BAR_WEEKS = 8;
@@ -38,9 +39,9 @@ export async function renderOverview(root: HTMLElement): Promise<void> {
   root.append(
     h('div', { class: 'stack' },
       statTiles(workouts),
+      exerciseList(sets, workoutById, exerciseById, settings.units),
       heatmap(workouts, sets),
       muscleSection(sets, workoutById, exerciseById, t),
-      exerciseList(sets, workoutById, exerciseById, settings.units),
     ),
   );
 }
@@ -280,35 +281,60 @@ function muscleSection(
 
 /* ---------- Exercise list ---------- */
 
+/** The overview's trend badges look at this many recent days. */
+const TREND_DAYS = 90;
+/** Sessions shown in each row's sparkline. */
+const SPARK_SESSIONS = 12;
+
+interface ExerciseRow {
+  ex: Exercise;
+  last: number;
+  count: number;
+  best: string;
+  bestLabel: string;
+  metric?: Metric;
+  spark: Array<{ x: number; y: number }>;
+  trend: Trend | null;
+}
+
 function exerciseList(
   sets: WorkoutSet[],
   workoutById: Map<number, Workout>,
   exerciseById: Map<number, Exercise>,
   units: Units,
 ): HTMLElement {
-  const rows: Array<{ ex: Exercise; last: number; count: number; best: string; bestLabel: string }> = [];
+  const since = Date.now() - TREND_DAYS * 86_400_000;
+  const rows: ExerciseRow[] = [];
   for (const [exerciseId, exSets] of groupBy(sets, (s) => s.exerciseId)) {
     const ex = exerciseById.get(exerciseId);
     if (!ex) continue;
-    const sessions: ExerciseSession[] = [...groupBy(exSets, (s) => s.workoutId)].map(([wid, ss]) =>
-      summarizeSession(wid, workoutById.get(wid)!.startedAt, ss),
-    );
-    const lastDate = Math.max(...sessions.map((s) => s.date));
+    const sessions: ExerciseSession[] = [...groupBy(exSets, (s) => s.workoutId)]
+      .map(([wid, ss]) => summarizeSession(wid, workoutById.get(wid)!.startedAt, ss))
+      .sort((a, b) => a.date - b.date);
     const [best, bestLabel] = bestOf(ex, sessions, units);
-    rows.push({ ex, last: lastDate, count: sessions.length, best, bestLabel });
+    const metric = metricsFor(kindOf(ex, sessions), units).find((m) => hasData(m, sessions));
+    const points = metric ? sessionPoints(metric, sessions) : [];
+    const trend = metric ? fitTrend(points.filter((p) => p.x >= since), metric.lowerIsBetter) : null;
+    rows.push({ ex, last: sessions[sessions.length - 1].date, count: sessions.length, best, bestLabel, metric, spark: points.slice(-SPARK_SESSIONS), trend });
   }
   rows.sort((a, b) => b.last - a.last);
 
   return h('section', { class: 'card stack' },
-    h('h2', { class: 'progress-h2' }, 'Exercises'),
+    h('div', { class: 'spread' },
+      h('h2', { class: 'progress-h2' }, 'Exercise progress'),
+      h('span', { class: 'small muted' }, 'Trend · last 3 months'),
+    ),
+    h('p', { class: 'small muted progress-ex-hint' }, 'Tap an exercise for charts of weight, est. 1RM, volume and reps over time.'),
     h('ul', { class: 'list progress-ex-list' },
       ...rows.map((r) =>
         h('li', {},
           h('a', { class: 'progress-ex-row', href: `#/progress/${r.ex.id}` },
             h('span', { class: 'grow' },
               h('span', { class: 'progress-ex-name' }, r.ex.name),
-              h('span', { class: 'small muted' }, `${formatDate(r.last)} · ${r.count} session${r.count === 1 ? '' : 's'}`),
+              h('span', { class: 'small muted' }, `${shortDate(r.last)} · ${r.count} session${r.count === 1 ? '' : 's'}`),
+              trendBadge(r),
             ),
+            sparkline(r.spark, !!r.metric?.lowerIsBetter, r.trend?.direction),
             h('span', { class: 'progress-ex-best' }, h('strong', {}, r.best), h('span', { class: 'small muted' }, r.bestLabel)),
             h('span', { class: 'progress-chevron', 'aria-hidden': 'true' }, '›'),
           ),
@@ -316,6 +342,47 @@ function exerciseList(
       ),
     ),
   );
+}
+
+/** "▲ Est. 1RM +6%" / "● Est. 1RM steady" / nothing when there are too few recent sessions. */
+function trendBadge(r: ExerciseRow): HTMLElement | null {
+  if (!r.metric) return null;
+  if (!r.trend) return h('span', { class: 'small muted progress-ex-trend' }, `${r.metric.label}: not enough recent sessions`);
+  const { direction, pct } = r.trend;
+  const amount = `${Math.abs(pct) >= 10 ? Math.round(Math.abs(pct)) : fmtNum(Math.abs(pct), 1)}%`;
+  if (direction === 'flat') return h('span', { class: 'small progress-ex-trend muted' }, `● ${r.metric.label} steady`);
+  const better = direction === 'better';
+  const sign = pct > 0 ? '+' : '−';
+  return h('span', { class: `small progress-ex-trend ${better ? 'progress-up' : 'progress-down'}` },
+    `${better ? '▲' : '▼'} ${r.metric.label} ${r.metric.lowerIsBetter ? (better ? 'faster ' : 'slower ') : sign}${amount}`);
+}
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+/** Tiny line of the headline metric over the last few sessions (no axes; the shape is the point). */
+function sparkline(points: Array<{ x: number; y: number }>, lowerIsBetter: boolean, direction?: Trend['direction']): Element {
+  const W = 64, H = 28, P = 3;
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('class', `progress-spark${direction === 'better' ? ' better' : ''}`);
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('aria-hidden', 'true');
+  if (points.length < 2) return svg;
+  const ys = points.map((p) => p.y);
+  const lo = Math.min(...ys), hi = Math.max(...ys);
+  const sy = (y: number) => {
+    const f = hi === lo ? 0.5 : (y - lo) / (hi - lo);
+    return P + (lowerIsBetter ? f : 1 - f) * (H - 2 * P);
+  };
+  // Evenly spaced by session, not by date, so bursts of sessions stay readable at this size.
+  const sx = (i: number) => P + (i / (points.length - 1)) * (W - 2 * P);
+  const line = document.createElementNS(SVG_NS, 'polyline');
+  line.setAttribute('points', points.map((p, i) => `${sx(i).toFixed(1)},${sy(p.y).toFixed(1)}`).join(' '));
+  const dot = document.createElementNS(SVG_NS, 'circle');
+  dot.setAttribute('cx', sx(points.length - 1).toFixed(1));
+  dot.setAttribute('cy', sy(points[points.length - 1].y).toFixed(1));
+  dot.setAttribute('r', '2.5');
+  svg.append(line, dot);
+  return svg;
 }
 
 /** Headline best for the list: est. 1RM, most reps (bodyweight), or longest distance/duration (cardio). */

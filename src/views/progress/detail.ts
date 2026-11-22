@@ -1,24 +1,14 @@
 import { musclesLabel } from '../../components/muscle-chips';
-import { Chart } from 'chart.js';
-import { db, type Exercise, type WorkoutSet } from '../../db';
+import { Chart, type Plugin } from 'chart.js';
+import { db, type WorkoutSet } from '../../db';
 import { computePRs, exerciseHistory, startOfDay, type ExerciseSession } from '../../lib/analytics';
 import { h } from '../../lib/dom';
 import { fmtNum, formatDate, formatDuration, formatPace, toDisplayWeight } from '../../lib/format';
 import { getSettings, type Units } from '../../lib/settings';
 import { shortDate, theme, track, untrack } from './charts';
+import { fitTrend, hasData, kindOf, metricsFor, MIN_TREND_POINTS, type Kind, type Metric, type Trend } from './metrics';
 
-type Kind = 'weighted' | 'reps' | 'cardio';
 type RangeKey = '1M' | '3M' | '6M' | '1Y' | 'All';
-
-interface Metric {
-  key: string;
-  label: string;
-  /** Value for a session in display units, or null if the session has no data for it. */
-  value: (s: ExerciseSession) => number | null;
-  fmt: (v: number) => string;
-  /** Pace: a smaller number is better. */
-  lowerIsBetter?: boolean;
-}
 
 const RANGES: Array<{ key: RangeKey; months: number; words: string }> = [
   { key: '1M', months: 1, words: 'over 1 month' },
@@ -61,35 +51,6 @@ export async function renderDetail(root: HTMLElement, idParam: string): Promise<
   root.append(h('div', { class: 'stack' }, chartCard(kind, sessions, units), prCard(kind, sessions, units), recentCard(kind, sessions, units)));
 }
 
-function kindOf(ex: Exercise, sessions: ExerciseSession[]): Kind {
-  if (ex.type === 'cardio') return 'cardio';
-  return sessions.some((s) => s.topWeight > 0) ? 'weighted' : 'reps';
-}
-
-function metricsFor(kind: Kind, units: Units): Metric[] {
-  const w = (v: number) => `${fmtNum(v, 1)} ${units}`;
-  const nz = (v: number) => (v > 0 ? v : null);
-  switch (kind) {
-    case 'weighted':
-      return [
-        { key: 'top', label: 'Top weight', value: (s) => (s.topWeight > 0 ? toDisplayWeight(s.topWeight, units) : null), fmt: w },
-        { key: 'e1rm', label: 'Est. 1RM', value: (s) => (s.bestE1rm > 0 ? toDisplayWeight(s.bestE1rm, units) : null), fmt: w },
-        { key: 'volume', label: 'Volume', value: (s) => (s.volume > 0 ? Math.round(toDisplayWeight(s.volume, units)) : null), fmt: (v) => `${Math.round(v).toLocaleString()} ${units}` },
-      ];
-    case 'reps':
-      return [
-        { key: 'maxReps', label: 'Best set', value: (s) => nz(Math.max(0, ...s.sets.map((x) => x.reps ?? 0))), fmt: (v) => `${fmtNum(v, 0)} reps` },
-        { key: 'totalReps', label: 'Total reps', value: (s) => nz(s.totalReps), fmt: (v) => `${fmtNum(v, 0)} reps` },
-      ];
-    case 'cardio':
-      return [
-        { key: 'distance', label: 'Distance', value: (s) => nz(s.distance), fmt: (v) => `${fmtNum(v, 2)} km` },
-        { key: 'duration', label: 'Duration', value: (s) => nz(s.duration), fmt: formatDuration },
-        { key: 'pace', label: 'Pace', value: (s) => (s.distance > 0 && s.duration > 0 ? s.duration / s.distance : null), fmt: formatPace, lowerIsBetter: true },
-      ];
-  }
-}
-
 function rangeStart(months: number): number {
   if (!months) return 0;
   const d = new Date();
@@ -101,12 +62,12 @@ function rangeStart(months: number): number {
 
 function chartCard(kind: Kind, sessions: ExerciseSession[], units: Units): HTMLElement {
   const metrics = metricsFor(kind, units);
-  const hasData = (m: Metric) => sessions.some((s) => m.value(s) !== null);
-  let metric = metrics.find((m) => m.key === lastMetric[kind] && hasData(m)) ?? metrics.find(hasData) ?? metrics[0];
+  const withData = (m: Metric) => hasData(m, sessions);
+  let metric = metrics.find((m) => m.key === lastMetric[kind] && withData(m)) ?? metrics.find(withData) ?? metrics[0];
   let range = RANGES.find((r) => r.key === lastRange) ?? RANGES[1];
 
-  const summary = h('p', { class: 'progress-summary' });
-  const canvas = h('canvas', { role: 'img', 'aria-label': 'Trend chart, one point per session' });
+  const summary = h('div', { class: 'progress-summary' });
+  const canvas = h('canvas', { role: 'img', 'aria-label': 'Trend chart, one point per session, with a dashed trend line' });
   const chartBox = h('div', { class: 'progress-chart' }, canvas);
   const emptyMsg = h('p', { class: 'muted small progress-range-empty' }, 'No sessions in this range.');
   const detail = h('div', { class: 'progress-session' }, h('p', { class: 'small muted' }, 'Tap a point to see that session’s sets.'));
@@ -121,10 +82,11 @@ function chartCard(kind: Kind, sessions: ExerciseSession[], units: Units): HTMLE
     const since = rangeStart(range.months);
     const inRange = sessions.filter((s) => s.date >= since && metric.value(s) !== null);
     const points = inRange.map((s) => ({ x: s.date, y: metric.value(s)! }));
+    const trend = fitTrend(points, metric.lowerIsBetter);
 
     if (chart) untrack(chart);
     chart = undefined;
-    summary.replaceChildren(...summaryText(metric, range, inRange));
+    summary.replaceChildren(...summaryText(metric, range, inRange, trend));
     chartBox.hidden = points.length === 0;
     emptyMsg.hidden = points.length > 0;
     if (points.length === 0) return;
@@ -132,6 +94,7 @@ function chartCard(kind: Kind, sessions: ExerciseSession[], units: Units): HTMLE
     const t = theme();
     const minX = points[0].x, maxX = points[points.length - 1].x;
     const pad = Math.max((maxX - minX) * 0.04, 86_400_000);
+    const trendColor = trend?.direction === 'better' ? t.accent : t.muted;
     chart = track(
       new Chart(canvas, {
         type: 'line',
@@ -150,6 +113,8 @@ function chartCard(kind: Kind, sessions: ExerciseSession[], units: Units): HTMLE
             tension: 0.2,
           }],
         },
+        // Trend line drawn behind the data (a plugin rather than a dataset, so it never steals taps or tooltips).
+        plugins: trend ? [trendLinePlugin(trend, minX, maxX, trendColor)] : [],
         options: {
           responsive: true,
           maintainAspectRatio: false,
@@ -191,6 +156,7 @@ function chartCard(kind: Kind, sessions: ExerciseSession[], units: Units): HTMLE
   };
 
   for (const m of metrics) {
+    if (!withData(m)) continue;
     metricChips.append(h('button', { class: 'chip', 'data-key': m.key, onclick: () => { metric = m; lastMetric[kind] = m.key; draw(); } }, m.label));
   }
   for (const r of RANGES) {
@@ -201,23 +167,72 @@ function chartCard(kind: Kind, sessions: ExerciseSession[], units: Units): HTMLE
   return h('section', { class: 'card stack' }, metricChips, rangeChips, summary, chartBox, emptyMsg, detail);
 }
 
-/** "▲ +7.5 kg over 3 months (92.5 → 100 kg)" etc. */
-function summaryText(metric: Metric, range: (typeof RANGES)[number], inRange: ExerciseSession[]): Array<Node | string> {
+function trendLinePlugin(trend: Trend, fromX: number, toX: number, color: string): Plugin<'line'> {
+  return {
+    id: 'trendLine',
+    beforeDatasetsDraw(c) {
+      const { ctx, chartArea, scales } = c;
+      const x = scales.x, y = scales.y;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(chartArea.left, chartArea.top, chartArea.width, chartArea.height);
+      ctx.clip();
+      ctx.setLineDash([6, 5]);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = color;
+      ctx.globalAlpha = 0.7;
+      ctx.beginPath();
+      ctx.moveTo(x.getPixelForValue(fromX), y.getPixelForValue(trend.at(fromX)));
+      ctx.lineTo(x.getPixelForValue(toX), y.getPixelForValue(trend.at(toX)));
+      ctx.stroke();
+      ctx.restore();
+    },
+  };
+}
+
+/**
+ * Headline verdict from the fitted trend ("▲ Trending up +8% over 3 months"), plus the rate and the
+ * first → last values underneath.
+ */
+function summaryText(metric: Metric, range: (typeof RANGES)[number], inRange: ExerciseSession[], trend: Trend | null): Array<Node | string> {
   if (inRange.length === 0) return [];
   const first = metric.value(inRange[0])!, last = metric.value(inRange[inRange.length - 1])!;
-  if (inRange.length === 1) return [`1 session in this range: ${metric.fmt(last)}`];
+  const n = inRange.length;
   const words = range.words || `since ${shortDate(inRange[0].date)}`;
-  const span = ` ${words} (${metric.fmt(first)} → ${metric.fmt(last)})`;
-  const delta = last - first;
-  if (Math.abs(delta) < 1e-9) return [h('span', { class: 'muted' }, '●'), ` No change${span}`];
-  const improved = metric.lowerIsBetter ? delta < 0 : delta > 0;
-  const arrow = h('span', { class: improved ? 'progress-up' : 'progress-down' }, improved ? '▲' : '▼');
-  if (metric.lowerIsBetter) {
-    // Pace: talk about faster/slower rather than a signed number.
-    return [arrow, ` ${metric.fmt(Math.abs(delta))} ${improved ? 'faster' : 'slower'}${span}`];
+  const sessionsWord = `${n} session${n === 1 ? '' : 's'}`;
+  const sub = (...parts: string[]) => h('div', { class: 'small muted progress-summary-sub' }, parts.join(' · '));
+
+  if (!trend) {
+    return [
+      h('div', {}, n === 1 ? `1 session in this range: ${metric.fmt(last)}` : `${metric.fmt(first)} → ${metric.fmt(last)} ${words}`),
+      sub(`Log ${MIN_TREND_POINTS - n > 0 ? `${MIN_TREND_POINTS - n} more session${MIN_TREND_POINTS - n === 1 ? '' : 's'}` : 'sessions on different days'} in this range to see a trend`),
+    ];
   }
-  const amount = metric.fmt(Math.abs(delta));
-  return [arrow, ` ${delta > 0 ? '+' : '−'}${amount}${span}`];
+
+  const span = `${metric.fmt(first)} → ${metric.fmt(last)}`;
+  if (trend.direction === 'flat') {
+    return [
+      h('div', {}, h('span', { class: 'muted' }, '●'), ` Holding steady ${words}`),
+      sub(sessionsWord, span),
+    ];
+  }
+
+  const better = trend.direction === 'better';
+  const arrow = h('span', { class: better ? 'progress-up' : 'progress-down' }, better ? '▲' : '▼');
+  const pct = `${Math.abs(trend.pct) >= 10 ? Math.round(Math.abs(trend.pct)) : fmtNum(Math.abs(trend.pct), 1)}%`;
+  // Rate per week for short spans, per month otherwise.
+  const spanDays = (inRange[n - 1].date - inRange[0].date) / 86_400_000;
+  const [perDays, perWord] = spanDays < 42 ? [7, 'week'] : [30.44, 'month'];
+  const rate = Math.abs(trend.perDay * perDays);
+  let headline: string, rateText: string;
+  if (metric.lowerIsBetter) {
+    headline = `${better ? 'Getting faster' : 'Getting slower'} ${pct} ${words}`;
+    rateText = `≈ ${metric.fmt(rate)} ${better ? 'faster' : 'slower'} per ${perWord}`;
+  } else {
+    headline = `Trending ${trend.end > trend.start ? 'up' : 'down'} ${trend.end > trend.start ? '+' : '−'}${pct} ${words}`;
+    rateText = `≈ ${trend.perDay > 0 ? '+' : '−'}${metric.fmt(rate)} per ${perWord}`;
+  }
+  return [h('div', {}, arrow, ` ${headline}`), sub(rateText, sessionsWord, span)];
 }
 
 function showSession(box: HTMLElement, session: ExerciseSession, kind: Kind, units: Units): void {
