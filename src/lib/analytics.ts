@@ -60,6 +60,24 @@ export async function lastSessionSets(exerciseId: number, excludeWorkoutId?: num
   return [];
 }
 
+/**
+ * The best strength set ever logged for this exercise in a finished workout, excluding `excludeWorkoutId`:
+ * the heaviest weight, ties broken by most reps (so bodyweight-only exercises pick the most reps).
+ * Earliest wins a full tie, i.e. when the record was first set.
+ */
+export async function bestStrengthSet(exerciseId: number, excludeWorkoutId?: number): Promise<WorkoutSet | undefined> {
+  const sets = await db.sets.where('[exerciseId+createdAt]').between([exerciseId, 0], [exerciseId, Infinity]).toArray();
+  const ids = [...new Set(sets.map((s) => s.workoutId))].filter((id) => id !== excludeWorkoutId);
+  const finished = new Set((await db.workouts.bulkGet(ids)).filter((w) => w?.endedAt !== undefined).map((w) => w!.id));
+  let best: WorkoutSet | undefined;
+  for (const s of sets) {
+    const w = s.weight ?? 0, r = s.reps ?? 0;
+    if (r <= 0 || !finished.has(s.workoutId)) continue;
+    if (!best || w > (best.weight ?? 0) || (w === (best.weight ?? 0) && r > (best.reps ?? 0))) best = s;
+  }
+  return best;
+}
+
 export interface PersonalRecords {
   bestWeight?: { weight: number; reps: number; date: number };
   bestE1rm?: { value: number; weight: number; reps: number; date: number };
