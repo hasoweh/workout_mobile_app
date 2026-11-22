@@ -15,6 +15,11 @@ export function describeSet(s: WorkoutSet, ex: Exercise | undefined, units: Unit
   return formatSet(s, isCardio(ex, [s]), units);
 }
 
+/** "Best: 100 kg × 5 · Sat 10 Oct" — the all-time best set to match or beat. */
+export function describeBestSet(best: WorkoutSet, ex: Exercise, units: Units): string {
+  return `Best: ${describeSet(best, ex, units)} · ${formatDate(best.createdAt)}`;
+}
+
 /** "Last: 80 kg × 8, 8, 6 · Sat 10 Oct" summary of a previous session. */
 export function describeLastSession(sets: WorkoutSet[], ex: Exercise, units: Units): string | null {
   if (sets.length === 0) return null;

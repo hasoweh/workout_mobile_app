@@ -2,7 +2,7 @@ import { startRest, stopRest } from '../../components/rest-timer';
 import { workoutNameInput } from '../../components/workout-name';
 import { pickExercise } from '../../components/exercise-picker';
 import { db, type Exercise, type Workout, type WorkoutSet } from '../../db';
-import { lastSessionSets, sortSets } from '../../lib/analytics';
+import { bestStrengthSet, lastSessionSets, sortSets } from '../../lib/analytics';
 import { formatTarget, workoutTargets, type ProgramExercise } from '../../lib/programs';
 import { h } from '../../lib/dom';
 import { fmtNum, formatDate, formatDuration, formatTime, fromDisplayWeight, parseDuration, toDisplayWeight } from '../../lib/format';
@@ -10,7 +10,7 @@ import type { Settings } from '../../lib/settings';
 import { confirmDialog, openSheet, safe, toast } from '../../lib/ui';
 import { deleteWorkout, workoutExerciseIds } from '../../lib/workouts';
 import { editSetSheet, showSummary } from './sheets';
-import { describeLastSession, describeSet, parseNum } from './util';
+import { describeBestSet, describeLastSession, describeSet, parseNum } from './util';
 
 export interface RenderOpts { scrollToExercise?: number }
 export type Rerender = (opts?: RenderOpts) => Promise<void>;
@@ -21,8 +21,10 @@ const drafts = new Map<string, Draft>();
 /** Exercises whose "add set" entry row is expanded, keyed by workout/exercise. Collapsed by default. */
 const openEntries = new Set<string>();
 const entryKey = (ctx: Ctx, exerciseId: number) => `${ctx.workout.id}:${exerciseId}`;
-/** Previous-session sets don't change during a workout; cache them per workout/exercise. */
-const lastCache = new Map<string, WorkoutSet[]>();
+/** Earlier workouts' data for an exercise: the last session's sets (for prefill) and the all-time best set. */
+interface History { last: WorkoutSet[]; best?: WorkoutSet }
+/** History doesn't change during a workout; cache it per workout/exercise. */
+const historyCache = new Map<string, History>();
 
 interface Ctx {
   workout: Workout;
@@ -43,18 +45,19 @@ export async function buildActive(workout: Workout, settings: Settings, rerender
   const ids = await workoutExerciseIds(workout, sets);
   const ctx: Ctx = { workout, settings, exercises, targets: workoutTargets(workout), rerender };
 
-  const lasts = await Promise.all(ids.map(async (id) => {
+  const histories = await Promise.all(ids.map(async (id) => {
     const key = `${workout.id}:${id}`;
-    let last = lastCache.get(key);
-    if (!last) {
-      last = await lastSessionSets(id, workout.id);
-      lastCache.set(key, last);
+    let hist = historyCache.get(key);
+    if (!hist) {
+      const [last, best] = await Promise.all([lastSessionSets(id, workout.id), bestStrengthSet(id, workout.id)]);
+      hist = { last, best };
+      historyCache.set(key, hist);
     }
-    return last;
+    return hist;
   }));
 
   const cards = ids.map((id, i) =>
-    exerciseCard(ctx, id, sets.filter((s) => s.exerciseId === id), lasts[i], i, ids));
+    exerciseCard(ctx, id, sets.filter((s) => s.exerciseId === id), histories[i], i, ids));
 
   return h('div', { class: 'log-active' },
     header(workout),
@@ -93,10 +96,13 @@ function header(workout: Workout): HTMLElement {
   );
 }
 
-function exerciseCard(ctx: Ctx, exerciseId: number, sets: WorkoutSet[], last: WorkoutSet[], index: number, ids: number[]): HTMLElement {
+function exerciseCard(ctx: Ctx, exerciseId: number, sets: WorkoutSet[], { last, best }: History, index: number, ids: number[]): HTMLElement {
   const { settings } = ctx;
   const ex = ctx.exercises.get(exerciseId);
-  const lastText = ex ? describeLastSession(last, ex, settings.units) : null;
+  // Strength: the all-time best set to match or beat. Cardio keeps the last-session summary.
+  const historyText = !ex ? null
+    : ex.type !== 'cardio' && best ? describeBestSet(best, ex, settings.units)
+    : describeLastSession(last, ex, settings.units);
   const target = ex ? ctx.targets.get(ex.name.toLowerCase()) : undefined;
 
   const setList = sets.length
@@ -119,7 +125,7 @@ function exerciseCard(ctx: Ctx, exerciseId: number, sets: WorkoutSet[], last: Wo
           ? h('div', { class: `small log-target${sets.length >= target.sets ? ' met' : ''}` },
               `Target ${formatTarget(target)}${sets.length >= target.sets ? ' ✓' : ` · ${sets.length}/${target.sets} sets`}`)
           : null,
-        lastText ? h('div', { class: 'muted small' }, lastText) : h('div', { class: 'muted small' }, 'First time — no history yet')),
+        historyText ? h('div', { class: 'muted small' }, historyText) : h('div', { class: 'muted small' }, 'First time — no history yet')),
       h('button', {
         type: 'button', class: 'btn-icon', 'aria-label': 'Exercise options',
         onclick: () => cardMenu(ctx, exerciseId, ex, sets.length, index, ids),
@@ -347,8 +353,8 @@ function finishBar(ctx: Ctx, setCount: number, ids: number[]): HTMLElement {
     if (!(await confirmDialog('Finish this workout?', { confirmLabel: 'Finish' }))) return;
     await db.workouts.update(ctx.workout.id, { endedAt: Date.now() });
     stopRest();
-    for (const key of [...drafts.keys(), ...lastCache.keys(), ...openEntries]) {
-      if (key.startsWith(`${ctx.workout.id}:`)) { drafts.delete(key); lastCache.delete(key); openEntries.delete(key); }
+    for (const key of [...drafts.keys(), ...historyCache.keys(), ...openEntries]) {
+      if (key.startsWith(`${ctx.workout.id}:`)) { drafts.delete(key); historyCache.delete(key); openEntries.delete(key); }
     }
     const names = new Map(ids.map((id) => [id, ctx.exercises.get(id)?.name ?? 'Unknown exercise']));
     // Show idle state behind the summary sheet.
