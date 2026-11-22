@@ -105,7 +105,9 @@ function buildDetail(data: DetailData, back: string, reload: () => Promise<void>
       h('div', { class: 'spread' },
         h('div', {},
           h('h2', {}, sec.exercise?.name ?? 'Unknown exercise'),
-          sec.exercise ? h('div', { class: 'muted small' }, musclesLabel(sec.exercise.muscles)) : null,
+          sec.exercise
+            ? h('div', { class: 'muted small' }, musclesLabel(sec.exercise.muscles), ' · ', h('a', { href: `#/progress/${sec.exercise.id}` }, 'Progress ›'))
+            : null,
         ),
         h('button', { class: 'btn-ghost', onclick: () => void openSetSheet(data, sec, null, reload) }, '+ Add set'),
       ),

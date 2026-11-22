@@ -7,7 +7,7 @@ import { formatTarget, workoutTargets, type ProgramExercise } from '../../lib/pr
 import { h } from '../../lib/dom';
 import { fmtNum, formatDate, formatDuration, formatTime, fromDisplayWeight, parseDuration, toDisplayWeight } from '../../lib/format';
 import type { Settings } from '../../lib/settings';
-import { confirmDialog, openSheet, safe, toast } from '../../lib/ui';
+import { confirmDialog, go, openSheet, safe, toast } from '../../lib/ui';
 import { deleteWorkout, workoutExerciseIds } from '../../lib/workouts';
 import { editSetSheet, showSummary } from './sheets';
 import { describeBestSet, describeLastSession, describeSet, parseNum } from './util';
@@ -326,6 +326,7 @@ function cardMenu(ctx: Ctx, exerciseId: number, ex: Exercise | undefined, setCou
     h('div', { class: 'stack' },
       h('button', { type: 'button', class: 'btn-secondary btn-block', disabled: index === 0, onclick: move(-1) }, '↑ Move up'),
       h('button', { type: 'button', class: 'btn-secondary btn-block', disabled: index === ids.length - 1, onclick: move(1) }, '↓ Move down'),
+      h('button', { type: 'button', class: 'btn-secondary btn-block', onclick: () => { close(); go('progress', exerciseId); } }, '📈 Progress chart'),
       h('button', { type: 'button', class: 'btn-danger btn-block', onclick: remove }, 'Remove from workout'),
     ),
     { title: ex?.name ?? 'Exercise' },

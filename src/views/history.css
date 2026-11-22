@@ -31,6 +31,7 @@
 
 .history-exercise h2 { margin: 0; font-size: 1.1rem; }
 .history-exercise .btn-ghost { white-space: nowrap; padding: 0 8px; }
+.history-exercise .small a { color: var(--link); text-decoration: none; }
 .history-sets { margin-top: 8px; }
 .history-sets > li { padding: 0; }
 
